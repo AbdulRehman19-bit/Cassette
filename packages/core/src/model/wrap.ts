@@ -1,4 +1,7 @@
+import { readFileSync } from "node:fs";
+import { Cassette } from "../cassette/schema.js";
 import { appendTrace } from "../trace.js";
+import { REPLAY_MODEL_ENV, replayModel } from "./replay.js";
 
 /** Structural shape of an Anthropic-style client; keeps core free of provider SDK deps. */
 export interface MessagesClient {
@@ -39,8 +42,17 @@ export function wrapModel<C extends MessagesClient>(client: C, opts: { tracePath
 /** Env var the runner sets so an agent can opt in to recording without code changes. */
 export const TRACE_ENV = "CASSETTE_TRACE";
 
-/** Wrap only when a runner asked for it. */
+/**
+ * The one line an agent adds: `const client = maybeWrapModel(new Anthropic())`.
+ * Under `cassette record|test` it logs calls; with `--offline` it serves the
+ * recorded responses instead; outside Cassette it returns the client untouched.
+ */
 export function maybeWrapModel<C extends MessagesClient>(client: C, env = process.env): C {
   const tracePath = env[TRACE_ENV];
+  const replayFrom = env[REPLAY_MODEL_ENV];
+  if (replayFrom) {
+    const cassette = Cassette.parse(JSON.parse(readFileSync(replayFrom, "utf8")));
+    return replayModel(cassette, { tracePath }) as C;
+  }
   return tracePath ? wrapModel(client, { tracePath }) : client;
 }

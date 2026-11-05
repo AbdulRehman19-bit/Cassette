@@ -3,6 +3,15 @@
   "version": "0.0.0",
   "type": "module",
   "private": true,
-  "bin": { "cassette": "dist/index.js" },
-  "scripts": { "build": "tsup src/index.ts --format esm" }
+  "bin": {
+    "cassette": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm"
+  },
+  "dependencies": {
+    "@cassette/core": "workspace:^",
+    "commander": "^15.0.0",
+    "picocolors": "^1.1.1"
+  }
 }

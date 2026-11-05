@@ -11,6 +11,6 @@ jobs:
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm lint
-      - run: pnpm typecheck
       - run: pnpm build
+      - run: pnpm typecheck
       - run: pnpm test --passWithNoTests

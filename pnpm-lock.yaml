@@ -17,6 +17,9 @@ importers:
       eslint:
         specifier: ^9.0.0
         version: 9.39.5
+      globals:
+        specifier: ^17.14.0
+        version: 17.14.0
       tsup:
         specifier: ^8.0.0
         version: 8.5.1(postcss@8.5.32)(typescript@5.9.3)(yaml@2.9.1)
@@ -37,6 +40,9 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^1.5.0
         version: 1.5.0(zod@4.6.7)
+      '@cassette/core':
+        specifier: workspace:^
+        version: link:../../packages/core
       '@modelcontextprotocol/sdk':
         specifier: 1.12.0
         version: 1.12.0
@@ -44,7 +50,17 @@ importers:
         specifier: ^4.6.7
         version: 4.6.7
 
-  packages/cli: {}
+  packages/cli:
+    dependencies:
+      '@cassette/core':
+        specifier: workspace:^
+        version: link:../core
+      commander:
+        specifier: ^15.0.0
+        version: 15.0.0
+      picocolors:
+        specifier: ^1.1.1
+        version: 1.1.1
 
   packages/core:
     dependencies:
@@ -800,6 +816,10 @@ packages:
   color-name@1.1.4:
     resolution: {integrity: sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==}
 
+  commander@15.0.0:
+    resolution: {integrity: sha512-z67u4ZhzCL/Tydu1lJARtEZYWbWaN7oYLHbsuzocr6y4N6WZAagG3RQ4FW61V1/0+jImpj293XfrcYnd1qxtPg==}
+    engines: {node: '>=22.12.0'}
+
   commander@4.1.1:
     resolution: {integrity: sha512-NOKm8xhkzAjzFx8B2v5OAHT+u5pRQc2UCa2Vq9jYL/31o2wi9mxBA7LIFs3sV5VSC49z6pEhfbMULvShKj26WA==}
     engines: {node: '>= 6'}
@@ -1054,6 +1074,10 @@ packages:
 
   globals@14.0.0:
     resolution: {integrity: sha512-oahGvuMGQlPw/ivIYBjVSrWAfWLBeku5tpPE2fOPLi+WHffIWbuh2tCjhyQhTBPMf5E9jDEH4FOmTYgYwbKwtQ==}
+    engines: {node: '>=18'}
+
+  globals@17.14.0:
+    resolution: {integrity: sha512-UtdkTVyAJePQv0J2M9Xe4L0ruNSDV314XiIJsADI2Zf40bcdAonE/D/OhAU8AT99oij9mhLByb+NvA3QWZYgCg==}
     engines: {node: '>=18'}
 
   gopd@1.2.0:
@@ -2247,6 +2271,8 @@ snapshots:
 
   color-name@1.1.4: {}
 
+  commander@15.0.0: {}
+
   commander@4.1.1: {}
 
   concat-map@0.0.1: {}
@@ -2564,6 +2590,8 @@ snapshots:
       is-glob: 4.0.3
 
   globals@14.0.0: {}
+
+  globals@17.14.0: {}
 
   gopd@1.2.0: {}
 

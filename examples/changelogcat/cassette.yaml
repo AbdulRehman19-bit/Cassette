@@ -1,0 +1,13 @@
+agent:
+  command: "node dist/main.js"
+  env: { MODEL: "claude-sonnet-5-5" }
+servers:
+  github:
+    transport: stdio
+    command: "npx -y @modelcontextprotocol/server-github"
+scenarios:
+  - name: release-example
+    input: { repo: "OWNER/REPO", fromTag: "v0.0.1", toTag: "v0.0.2" }
+diff:
+  ignoreArgs: ["per_page"]
+  failOn: [tool_added, tool_removed, tool_args_changed]

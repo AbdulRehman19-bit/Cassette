@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { maybeWrapModel } from "@cassette/core";
 import { connectGithub, runAgent } from "./agent.js";
 
 /** Usage: node dist/main.js <owner/repo> <fromTag> <toTag>  (or env REPO, FROM_TAG, TO_TAG) */
@@ -10,7 +11,7 @@ async function main() {
   }
   const host = await connectGithub();
   try {
-    const result = await runAgent({ repo, fromTag, toTag }, host, new Anthropic(), {
+    const result = await runAgent({ repo, fromTag, toTag }, host, maybeWrapModel(new Anthropic()), {
       model: process.env.MODEL ?? "claude-sonnet-5-5",
     });
     if (result.stoppedByLimit) console.error("warning: stopped at step limit");
