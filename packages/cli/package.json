@@ -1,0 +1,8 @@
+{
+  "name": "cassette-cli",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "bin": { "cassette": "dist/index.js" },
+  "scripts": { "build": "tsup src/index.ts --format esm" }
+}
