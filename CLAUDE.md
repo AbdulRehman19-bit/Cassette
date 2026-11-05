@@ -20,7 +20,7 @@ TypeScript, Node >=22, pnpm workspaces, tsup, Vitest, zod, yaml, commander + pic
 - `docs/` — spec, plan
 
 ## Determinism rules
-Temperature 0 + fixed seed where supported · strip/placeholder volatile fields (timestamps, IDs, key order) before diffing · configurable `tolerance` ignores whitespace/key-order arg changes · fail on tool-level changes by default; compare output text by similarity, not equality.
+Temperature 0 + fixed seed where the provider supports it (the current @anthropic-ai/sdk Messages API exposes no temperature param, so Anthropic runs rely on tolerant matching) · strip/placeholder volatile fields (timestamps, IDs, key order) before diffing · configurable `tolerance` ignores whitespace/key-order arg changes · fail on tool-level changes by default; compare output text by similarity, not equality.
 
 ## Run modes
 `record` live model+tools · `replay` (CI default) live model + recorded tools · `replay --offline` recorded model + tools.
