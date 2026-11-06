@@ -1,0 +1,18 @@
+name: cassette
+# Dogfood: Cassette tests ChangelogCat's recorded runs on every PR (offline: no API keys, no live calls).
+on: [pull_request]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  agent-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./action
+        with:
+          working-directory: examples/changelogcat
+          offline: "true"
+          install: pip install anthropic openai

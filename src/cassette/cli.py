@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import fnmatch
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -17,8 +18,10 @@ from .config import Config, load_dotenv
 from .config import load_config as _load_config
 from .differ import diff_cassettes, diff_lines, summary
 from .evaluate import ScenarioResult, evaluate_scenario
+from .github import API as GITHUB_API
+from .github import GitHubError, pr_number_from_event, upsert_comment
 from .proxy import ProxyOptions, run_proxy
-from .report import build_report, load_report, write_report
+from .report import build_report, load_report, render_comment, write_report
 from .runner import probe_live_schemas, run_scenario
 
 
@@ -251,3 +254,31 @@ def proxy(command: tuple[str, ...], **o: Any) -> None:
 
 if __name__ == "__main__":
     main()
+
+
+@main.command()
+@report_dir_opt
+@click.option("--repo", help="owner/name; defaults to $GITHUB_REPOSITORY.")
+@click.option("--pr", type=int, help="PR number; defaults to the Actions event's PR.")
+@click.option("--url", help="Link to the full report (e.g. the workflow artifact).")
+@click.option("--api-url", default=GITHUB_API, hidden=True)
+def comment(report_dir: str, repo: str | None, pr: int | None, url: str | None, api_url: str) -> None:
+    """Post (or update) the Cassette comment on a pull request. Needs GITHUB_TOKEN with pull-requests: write."""
+    repo = repo or os.environ.get("GITHUB_REPOSITORY")
+    pr = pr or pr_number_from_event()
+    token = os.environ.get("GITHUB_TOKEN")
+    if not (repo and pr and token):
+        raise click.ClickException("need --repo, --pr and $GITHUB_TOKEN (these are set automatically in a PR workflow)")
+    try:
+        data = load_report(report_dir)
+    except FileNotFoundError:
+        raise click.ClickException(f"no results in {report_dir}; run `cassette test` first") from None
+    body = render_comment(data, url)
+    try:
+        action, link = upsert_comment(repo, pr, body, token, api=api_url)
+    except GitHubError as e:
+        # Fork PRs get a read-only token; that must not turn a passing run red.
+        hint = " (PRs from forks get a read-only token; see the job summary instead)" if e.status in (401, 403) else ""
+        click.echo(click.style(f"could not post the PR comment: {e}{hint}", fg="yellow"), err=True)
+        sys.exit(3)
+    click.echo(f"comment {action}: {link}")

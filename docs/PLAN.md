@@ -45,7 +45,7 @@ Source: `Cassette — Project Spec.pdf` (4 weeks, ~20 working days). **Backend s
 - `cassette update`, `cassette report`, `--offline` (recorded model), `--model`, `--json`, `--filter`.
 - **Gate (Week 2):** `--model` set to a smaller model shows a readable trajectory diff in terminal and HTML.
 
-## Phase 7 — GitHub Action + PR comment (Days 11–12)
+## Phase 7 — GitHub Action + PR comment (Days 11–12) — built; first real PR run pending
 - `action/` wrapper around `cassette test`; PR comment markdown (summary line, scenario table, first diverging step, report artifact link); check status.
 - Run it on the Cassette repo itself, using `--offline` cassettes for its own tests.
 

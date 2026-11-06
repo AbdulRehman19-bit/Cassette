@@ -1,0 +1,129 @@
+name: Cassette
+description: Replay recorded agent runs, diff the trajectory, run assertions, and comment on the PR.
+author: Cassette
+branding:
+  icon: film
+  color: blue
+
+inputs:
+  config:
+    description: Path to cassette.yaml, relative to working-directory.
+    default: cassette.yaml
+  working-directory:
+    description: Directory to run in (where cassette.yaml and your agent live).
+    default: "."
+  offline:
+    description: "true = also replay the recorded model (no API calls, fully deterministic). false = live model, recorded tools; then set the model's API key in env."
+    default: "true"
+  model:
+    description: Try a different model than the recorded one (e.g. to see what a model swap changes).
+    default: ""
+  comment:
+    description: Post or update a PR comment with the result.
+    default: "true"
+  report-dir:
+    description: Where the report is written, relative to working-directory.
+    default: cassette-report
+  python-version:
+    description: Python version to run Cassette (and your agent) with.
+    default: "3.12"
+  install:
+    description: Command that installs your agent's dependencies, run before the tests (e.g. `pip install -r requirements.txt`).
+    default: ""
+  version:
+    description: "cassette-cli version specifier, e.g. `==0.1.0`. Ignored when the action runs from a checkout of the Cassette repo."
+    default: ""
+  args:
+    description: Extra arguments for `cassette test` (e.g. `--filter 'release-*'`).
+    default: ""
+  github-token:
+    description: Token used to post the PR comment (needs pull-requests write).
+    default: ${{ github.token }}
+
+outputs:
+  passed:
+    description: "true if every scenario passed."
+    value: ${{ steps.test.outputs.passed }}
+  report-url:
+    description: URL of the uploaded report artifact.
+    value: ${{ steps.upload.outputs.artifact-url }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install Cassette
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        if [ -f "$ACTION_PATH/../pyproject.toml" ]; then
+          python -m pip install --quiet "$ACTION_PATH/.."
+        else
+          python -m pip install --quiet "cassette-cli$VERSION"
+        fi
+
+    - name: Install agent dependencies
+      if: inputs.install != ''
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        INSTALL: ${{ inputs.install }}
+      run: eval "$INSTALL"
+
+    - name: Run Cassette
+      id: test
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        CONFIG: ${{ inputs.config }}
+        OFFLINE: ${{ inputs.offline }}
+        MODEL: ${{ inputs.model }}
+        REPORT_DIR: ${{ inputs.report-dir }}
+        EXTRA_ARGS: ${{ inputs.args }}
+      run: |
+        args=(test -c "$CONFIG" --report-dir "$REPORT_DIR")
+        [ "$OFFLINE" = "true" ] && args+=(--offline)
+        [ -n "$MODEL" ] && args+=(--model "$MODEL")
+        # shellcheck disable=SC2206
+        [ -n "$EXTRA_ARGS" ] && args+=($EXTRA_ARGS)
+        set +e
+        python -m cassette "${args[@]}"
+        code=$?
+        set -e
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+        echo "passed=$([ $code -eq 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+        if [ -f "$REPORT_DIR/comment.md" ]; then cat "$REPORT_DIR/comment.md" >> "$GITHUB_STEP_SUMMARY"; fi
+
+    - name: Upload report
+      id: upload
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: cassette-report
+        path: ${{ inputs.working-directory }}/${{ inputs.report-dir }}
+        if-no-files-found: warn
+
+    - name: Comment on the PR
+      if: always() && inputs.comment == 'true' && github.event_name == 'pull_request'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        REPORT_DIR: ${{ inputs.report-dir }}
+        REPORT_URL: ${{ steps.upload.outputs.artifact-url }}
+      run: |
+        # A comment that can't be posted (e.g. a fork PR's read-only token) must never decide the check's result.
+        python -m cassette comment --report-dir "$REPORT_DIR" --url "$REPORT_URL" \
+          || echo "::warning::Could not post the Cassette PR comment; see the job summary and the report artifact."
+
+    - name: Set check result
+      if: always()
+      shell: bash
+      env:
+        CODE: ${{ steps.test.outputs.exit-code }}
+      run: exit "${CODE:-1}"
