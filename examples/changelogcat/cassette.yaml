@@ -1,6 +1,6 @@
 agent:
   command: "python -m changelogcat"
-  env: { MODEL: "claude-sonnet-5-5" }
+  env: { PROVIDER: "groq", MODEL: "llama-3.3-70b-versatile" }
 servers:
   github:
     transport: stdio

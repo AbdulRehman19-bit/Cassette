@@ -6,12 +6,14 @@ import asyncio
 import fnmatch
 import json
 import sys
+from pathlib import Path
 from typing import Any
 
 import click
 
 from .cassette import read_cassette, read_scenario
-from .config import Config, load_config
+from .config import Config, load_dotenv
+from .config import load_config as _load_config
 from .differ import diff_cassettes, diff_lines, summary
 from .proxy import ProxyOptions, run_proxy
 from .runner import run_scenario
@@ -34,6 +36,13 @@ def main() -> None:
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="replace")
+
+
+def load_config(path: str) -> Config:
+    """Load the config, plus any `.env` next to it or in the working directory."""
+    cfg = _load_config(path)
+    load_dotenv(cfg.root / ".env", Path.cwd() / ".env")
+    return cfg
 
 
 _COLORS = {"add": "green", "remove": "red", "info": "yellow", "dim": "bright_black", "bad": "red"}

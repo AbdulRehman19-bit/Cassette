@@ -1,14 +1,34 @@
-"""Usage: python -m changelogcat <owner/repo> <fromTag> <toTag>  (or env REPO, FROM_TAG, TO_TAG)"""
+"""Usage: python -m changelogcat <owner/repo> <fromTag> <toTag>  (or env REPO, FROM_TAG, TO_TAG)
+
+Provider is chosen by env PROVIDER: `anthropic` (default, needs ANTHROPIC_API_KEY) or `groq` (needs GROQ_API_KEY).
+MODEL picks the model, e.g. claude-sonnet-5-5 or llama-3.3-70b-versatile.
+"""
 
 import asyncio
 import os
 import sys
-
-from anthropic import AsyncAnthropic
+from typing import Any
 
 from cassette.model import maybe_wrap_model
 
 from .agent import connect_github, run_agent
+
+DEFAULT_MODELS = {"anthropic": "claude-sonnet-5-5", "groq": "llama-3.3-70b-versatile"}
+
+
+def make_client(provider: str) -> Any:
+    if provider == "groq":
+        from cassette.model.openai_compat import groq_client
+
+        key = os.environ.get("GROQ_API_KEY")
+        if not key and not os.environ.get("CASSETTE_REPLAY_MODEL"):
+            raise SystemExit("GROQ_API_KEY is not set")
+        return groq_client(key or "offline")
+    if provider == "anthropic":
+        from anthropic import AsyncAnthropic
+
+        return AsyncAnthropic()
+    raise SystemExit(f"unknown PROVIDER: {provider} (use anthropic or groq)")
 
 
 async def main() -> int:
@@ -19,14 +39,15 @@ async def main() -> int:
     if not (repo and from_tag and to_tag):
         print("usage: python -m changelogcat <owner/repo> <fromTag> <toTag>", file=sys.stderr)
         return 2
+    provider = os.environ.get("PROVIDER", "anthropic")
     async with connect_github() as host:
         result = await run_agent(
             repo,
             from_tag,
             to_tag,
             host=host,
-            client=maybe_wrap_model(AsyncAnthropic()),
-            model=os.environ.get("MODEL", "claude-sonnet-5-5"),
+            client=maybe_wrap_model(make_client(provider)),
+            model=os.environ.get("MODEL", DEFAULT_MODELS.get(provider, "")),
         )
     if result.stopped_by_limit:
         print("warning: stopped at step limit", file=sys.stderr)

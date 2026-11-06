@@ -83,3 +83,19 @@ def expand_env(value: str, env: dict[str, str] | None = None) -> str:
     """Expand `${NAME}` from the environment so configs can reference secrets without containing them."""
     source = os.environ if env is None else env
     return re.sub(r"\$\{(\w+)\}", lambda m: source.get(m.group(1), ""), value)
+
+
+def load_dotenv(*paths: str | Path) -> list[Path]:
+    """Load KEY=VALUE lines from `.env` files into os.environ without overriding variables already set."""
+    loaded: list[Path] = []
+    for p in map(Path, paths):
+        if not p.is_file() or p in loaded:
+            continue
+        for line in p.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, _, v = line.partition("=")
+            os.environ.setdefault(k.removeprefix("export ").strip(), v.strip().strip("\"'"))
+        loaded.append(p)
+    return loaded

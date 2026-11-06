@@ -148,6 +148,7 @@ openai = [
 dev = [
     { name = "anthropic" },
     { name = "mypy" },
+    { name = "openai" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "ruff" },
@@ -169,6 +170,7 @@ provides-extras = ["anthropic", "openai"]
 dev = [
     { name = "anthropic", specifier = ">=2.6.0" },
     { name = "mypy", specifier = ">=1.11" },
+    { name = "openai", specifier = ">=3.46.0" },
     { name = "pytest", specifier = ">=8" },
     { name = "pytest-asyncio", specifier = ">=0.24" },
     { name = "ruff", specifier = ">=0.7" },
