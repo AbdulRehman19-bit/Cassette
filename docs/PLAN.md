@@ -54,7 +54,7 @@ Source: `Cassette — Project Spec.pdf` (4 weeks, ~20 working days). **Backend s
 - One-page install site (GitHub Pages).
 - Defenses: read-only token, tool allowlist, post-processing link filter.
 
-## Phase 9 — Attack fixtures (Days 13–14)
+## Phase 9 — Attack fixtures (Days 13–14) — DONE (docs/attacks.md)
 - 5 fixtures in `attacks/*.json`: `hidden-instruction`, `phishing-link`, `canary-exfil`, `tool-arg-smuggling`, `step-bomb` (placeholder domains and fake canaries only).
 - Scenarios + assertions that catch each one.
 

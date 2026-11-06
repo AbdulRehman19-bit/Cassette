@@ -66,6 +66,7 @@ async def run_agent(
     model: str,
     max_steps: int = MAX_STEPS,
     max_tokens: int = 2048,
+    system_prompt: str = SYSTEM_PROMPT,
 ) -> RunResult:
     tools = [
         {"name": t["name"], "description": t.get("description", ""), "input_schema": t["inputSchema"]}
@@ -84,7 +85,7 @@ async def run_agent(
         params: dict[str, Any] = {
             "model": model,
             "max_tokens": max_tokens,
-            "system": SYSTEM_PROMPT,
+            "system": system_prompt,
             "tools": tools,
             "messages": messages,
         }

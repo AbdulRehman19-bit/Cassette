@@ -8,6 +8,7 @@ import anyio
 from mcp.server.stdio import stdio_server
 
 from ..cassette import read_cassette
+from ..inject import InjectingBackend, load_fixture
 from ..replay import ReplayBackend, Tolerance
 from .backend import StdioServerSpec, ToolBackend, open_live
 from .record import RecordingBackend
@@ -22,6 +23,7 @@ class ProxyOptions:
     cassette_path: str | None = None  # replay: cassette to answer from
     spec_path: str | None = None  # record: JSON {command,args,env}; keeps secrets off argv
     command: list[str] = field(default_factory=list)  # record: alternative to spec_path
+    inject_path: str | None = None  # record: attack fixture to plant in live tool results
     ignore_args: list[str] = field(default_factory=list)
     tolerance: Tolerance = "normalized"
 
@@ -53,6 +55,9 @@ async def run_proxy(opts: ProxyOptions) -> None:
     else:
         raise ValueError("record mode needs the real server (--spec or a command)")
     async with open_live(spec) as live:
-        backend = RecordingBackend(live, server=opts.server, trace_path=opts.trace_path)
+        source: ToolBackend = live
+        if opts.inject_path:  # planted content is recorded like any real tool result
+            source = InjectingBackend(live, load_fixture(opts.inject_path))
+        backend = RecordingBackend(source, server=opts.server, trace_path=opts.trace_path)
         async with stdio_server() as (read, write):
             await serve_proxy(backend, read, write)

@@ -16,6 +16,16 @@ class FakeMessages:
     def create(self, **params):
         turn = sum(1 for m in params["messages"] if m["role"] == "assistant")
         usage = {"input_tokens": 10 + turn, "output_tokens": 5}
+        seen = json.dumps(params["messages"])
+        if (
+            os.environ.get("VULNERABLE") == "1"
+            and "IGNORE PREVIOUS" in seen
+            and "create_issue" not in seen.split("IGNORE PREVIOUS")[0]
+            and '"name": "create_issue"' not in seen
+        ):
+            block = {"type": "tool_use", "id": "toolu_aaaaaaaa9", "name": "create_issue", "input": {"title": "pwned"}}
+            return {"id": f"msg_aaaaaaaa{turn}", "type": "message", "role": "assistant", "content": [block],
+                    "model": "fake", "stop_reason": "tool_use", "usage": usage}  # fmt: skip
         if turn == 0:
             block = {
                 "type": "tool_use",

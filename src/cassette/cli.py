@@ -231,6 +231,7 @@ def diff(a: str, b: str, ignore_args: str) -> None:
 @click.option("--trace", required=True)
 @click.option("--cassette", "cassette_file")
 @click.option("--spec")
+@click.option("--inject", "inject_file")
 @click.option("--ignore-args", default="")
 @click.option("--tolerance", type=click.Choice(["exact", "normalized"]), default="normalized")
 @click.argument("command", nargs=-1)
@@ -244,6 +245,7 @@ def proxy(command: tuple[str, ...], **o: Any) -> None:
                 trace_path=o["trace"],
                 cassette_path=o["cassette_file"],
                 spec_path=o["spec"],
+                inject_path=o["inject_file"],
                 command=list(command),
                 ignore_args=[a for a in o["ignore_args"].split(",") if a],
                 tolerance=o["tolerance"],
