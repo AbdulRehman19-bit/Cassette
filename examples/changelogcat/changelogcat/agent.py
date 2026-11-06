@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from collections.abc import AsyncIterator, Mapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
@@ -126,8 +127,9 @@ async def connect_github(env: Mapping[str, str] | None = None) -> AsyncIterator[
     from mcp.client.stdio import get_default_environment, stdio_client
 
     e = os.environ if env is None else env
-    command = e.get("MCP_GITHUB_COMMAND", "npx")
-    args = json.loads(e["MCP_GITHUB_ARGS"]) if "MCP_GITHUB_ARGS" in e else ["-y", "@modelcontextprotocol/server-github"]
+    # Default: the bundled read-only server (GET requests only). Cassette overrides both vars to insert its proxy.
+    command = e.get("MCP_GITHUB_COMMAND", sys.executable)
+    args = json.loads(e["MCP_GITHUB_ARGS"]) if "MCP_GITHUB_ARGS" in e else ["-m", "readonly_github_mcp"]
     token = e.get("GITHUB_TOKEN") or e.get("GITHUB_PERSONAL_ACCESS_TOKEN", "")
     params = StdioServerParameters(
         command=command, args=args, env={**get_default_environment(), "GITHUB_PERSONAL_ACCESS_TOKEN": token}

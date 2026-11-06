@@ -49,7 +49,7 @@ Source: `Cassette — Project Spec.pdf` (4 weeks, ~20 working days). **Backend s
 - `action/` wrapper around `cassette test`; PR comment markdown (summary line, scenario table, first diverging step, report artifact link); check status.
 - Run it on the Cassette repo itself, using `--offline` cassettes for its own tests.
 
-## Phase 8 — ChangelogCat live (Days 12–13)
+## Phase 8 — ChangelogCat live (Days 12–13) — built; needs GROQ_API_KEY secret + Pages enabled + a real tag push
 - Tag-push workflow in installed repos; writes the Release body in a separate narrow-scope step (agent stays read-only).
 - One-page install site (GitHub Pages).
 - Defenses: read-only token, tool allowlist, post-processing link filter.

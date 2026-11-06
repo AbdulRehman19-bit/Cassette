@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChangelogCat: release notes from your merged PRs</title>
+<meta name="description" content="A small, read-only GitHub Action that drafts user-facing release notes when you push a tag. Tested by Cassette.">
+<style>
+:root{--bg:#fbfaf8;--fg:#1d1c1a;--muted:#67645d;--card:#fff;--line:#e3e0d8;--accent:#5b3fd1;--accentfg:#fff;--code:#f3f1ec}
+@media (prefers-color-scheme:dark){:root{--bg:#151412;--fg:#ece9e3;--muted:#a09c92;--card:#1d1c19;--line:#34322d;--accent:#9d8bff;--accentfg:#151412;--code:#23211e}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:760px;margin:0 auto;padding:48px 20px 80px}
+h1{font-size:2.2rem;line-height:1.15;margin:0 0 12px}
+h2{font-size:1.25rem;margin:40px 0 10px}
+p{margin:0 0 14px}
+.lead{font-size:1.15rem;color:var(--muted)}
+code,pre{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;font-size:.88rem}
+:not(pre)>code{background:var(--code);padding:1px 6px;border-radius:5px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto;margin:0}
+.block{position:relative;margin:12px 0 18px}
+button.copy{position:absolute;top:8px;right:8px;background:var(--card);color:var(--fg);border:1px solid var(--line);
+border-radius:6px;padding:3px 10px;font:inherit;font-size:.8rem;cursor:pointer}
+button.copy:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+ol{padding-left:1.2rem}li{margin:0 0 10px}
+.note{border-left:3px solid var(--accent);padding:2px 0 2px 14px;color:var(--muted);margin:18px 0}
+ul.safe{list-style:none;padding:0}ul.safe li{padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--card);margin-bottom:8px}
+a{color:var(--accent)}footer{margin-top:48px;color:var(--muted);font-size:.9rem}
+</style>
+</head>
+<body>
+<main>
+<h1>ChangelogCat</h1>
+<p class="lead">Push a tag. Get user-facing release notes in your GitHub Release, written from the PRs that shipped in it.</p>
+<p>It is a small GitHub Action built to be <em>tested</em>: it is the live test subject of
+<a href="https://github.com/AbdulRehman19-bit/Cassette">Cassette</a>, a record-and-replay testing tool for agents.</p>
+
+<h2>Add it in two minutes</h2>
+<ol>
+<li>Get a free API key at <a href="https://console.groq.com/keys">console.groq.com/keys</a> and save it in your repository as a secret named <code>GROQ_API_KEY</code> (Settings, Secrets and variables, Actions).</li>
+<li>Add this file as <code>.github/workflows/release-notes.yml</code>:</li>
+</ol>
+
+<div class="block">
+<button class="copy" type="button" aria-label="Copy the workflow">Copy</button>
+<pre id="wf">name: release notes
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  notes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read          # the agent can only read
+    steps:
+      - uses: AbdulRehman19-bit/Cassette/examples/changelogcat@main
+        with:
+          api-key: ${{ secrets.GROQ_API_KEY }}
+
+  publish:
+    needs: notes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write         # only this job can write
+    steps:
+      - uses: AbdulRehman19-bit/Cassette/examples/changelogcat/publish@main</pre>
+</div>
+
+<ol start="3">
+<li>Push a tag like <code>v1.2.0</code>. The notes appear in the Release body, compared against your previous version tag.</li>
+</ol>
+
+<h2>Why it is safe to run on your repo</h2>
+<p>ChangelogCat reads text written by strangers (PR titles and bodies) and publishes AI output, so a hostile PR could try to
+steer it. It is built in layers, so no single failure is enough:</p>
+<ul class="safe">
+<li><strong>It cannot write.</strong> The agent runs in a job with <code>contents: read</code>, talks to GitHub through a server that only makes GET requests, and exposes just four read tools.</li>
+<li><strong>Publishing is separate.</strong> A second job, with no agent code and no model key, is the only thing that edits the Release.</li>
+<li><strong>Links are filtered.</strong> Anything the model writes that does not point into your repository is removed before publishing.</li>
+<li><strong>It is tested.</strong> Cassette replays recorded runs in CI and fails a change that adds a forbidden tool call or leaks a planted secret.</li>
+</ul>
+
+<p class="note">Early software. It uses a free-tier model by default, so quality and rate limits vary; for large releases
+choose a stronger model with the <code>provider</code> and <code>model</code> inputs. Always skim the notes before announcing a release.</p>
+
+<footer>ChangelogCat is part of <a href="https://github.com/AbdulRehman19-bit/Cassette">Cassette</a>.</footer>
+</main>
+<script>
+document.querySelectorAll("button.copy").forEach(function (b) {
+  b.addEventListener("click", function () {
+    var text = b.parentElement.querySelector("pre").innerText;
+    function done() { b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500); }
+    if (navigator.clipboard) { navigator.clipboard.writeText(text).then(done, function () { b.textContent = "Select and copy"; }); }
+    else { b.textContent = "Select and copy"; }
+  });
+});
+</script>
+</body>
+</html>

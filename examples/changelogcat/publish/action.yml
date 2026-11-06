@@ -1,0 +1,43 @@
+name: ChangelogCat publish
+description: Write the drafted notes into the GitHub Release body. Runs no agent code and needs no model key; this is the only step with write access.
+author: Cassette
+
+inputs:
+  tag:
+    description: The release tag.
+    default: ${{ github.ref_name }}
+  draft:
+    description: Create the release as a draft when it doesn't exist yet.
+    default: "false"
+  github-token:
+    description: "Token with `contents - write`."
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: changelogcat-notes
+        path: ${{ runner.temp }}/changelogcat-notes
+
+    - name: Publish to the release
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        TAG: ${{ inputs.tag }}
+        DRAFT: ${{ inputs.draft }}
+        NOTES_DIR: ${{ runner.temp }}/changelogcat-notes
+      run: |
+        file="$NOTES_DIR/release-notes.md"
+        [ -s "$file" ] || { echo "::error::no notes to publish"; exit 1; }
+        # GitHub rejects release bodies over 125,000 characters.
+        [ "$(wc -c < "$file")" -le 125000 ] || { echo "::error::notes are too long for a release body"; exit 1; }
+        if gh release view "$TAG" >/dev/null 2>&1; then
+          gh release edit "$TAG" --notes-file "$file"
+        else
+          args=(release create "$TAG" --title "$TAG" --notes-file "$file")
+          [ "$DRAFT" = "true" ] && args+=(--draft)
+          gh "${args[@]}"
+        fi
+        echo "Published notes for $TAG"
