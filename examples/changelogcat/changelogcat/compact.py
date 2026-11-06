@@ -25,7 +25,9 @@ def _slim_pr(pr: dict[str, Any], *, body: bool) -> dict[str, Any]:
     out = {k: pr[k] for k in _PR_KEYS if k in pr}
     if isinstance(pr.get("user"), dict) and pr["user"].get("login"):
         out["author"] = pr["user"]["login"]
-    labels = [lb.get("name") for lb in pr.get("labels") or [] if isinstance(lb, dict)]
+    elif pr.get("author"):  # already slimmed by the server
+        out["author"] = pr["author"]
+    labels = [lb.get("name") if isinstance(lb, dict) else lb for lb in pr.get("labels") or []]
     if labels:
         out["labels"] = labels
     if body and isinstance(pr.get("body"), str) and pr["body"]:
