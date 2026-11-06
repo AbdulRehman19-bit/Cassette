@@ -37,6 +37,8 @@ class ServerConfig(_Model):
 class Scenario(_Model):
     name: str = Field(pattern=r"^[\w.-]+$")
     input: dict[str, Any] = Field(default_factory=dict)
+    # Extra assertions that apply only to this scenario (e.g. attack fixtures), on top of the global ones.
+    assertions: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class DiffConfig(_Model):
@@ -54,6 +56,8 @@ class Config(_Model):
     cassettesDir: str = "cassettes"  # noqa: N815
     diff: DiffConfig = Field(default_factory=DiffConfig)
     assertions: list[dict[str, Any]] = Field(default_factory=list)
+    # USD per million tokens, `model: [input, output]`; overrides/extends the built-in table used by max_cost_usd.
+    pricing: dict[str, list[float]] = Field(default_factory=dict)
 
     # Set by load_config; not part of the file.
     root: Path = Field(default=Path("."), exclude=True)

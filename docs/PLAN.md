@@ -35,7 +35,7 @@ Source: `Cassette — Project Spec.pdf` (4 weeks, ~20 working days). **Backend s
 - `ignoreArgs`, `tolerance`, `failOn`; output similarity for text.
 - Terminal diff output; `cassette diff <a> <b>`.
 
-## Phase 5 — Assertions (Days 8–9)
+## Phase 5 — Assertions (Days 8–9) — DONE (docs/assertions.md)
 - Day 8: `forbid_tool`, `require_tool`, `no_canary`, `links_allowlist`, budgets (`max_steps`, `max_cost_usd`, `max_latency_ms`).
 - Day 9: `tool_sequence`, `output_matches`, `schema_unchanged`, `custom`.
 - Deterministic only; no LLM judge.

@@ -33,6 +33,12 @@ def project(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, Path]:
                 "scenarios:",
                 "  - name: basic",
                 "    input: { repo: acme/widgets }",
+                "assertions:",
+                "  - forbid_tool: [get_file_contents, create_issue]",
+                "  - require_tool: list_pull_requests",
+                "  - max_steps: 5",
+                "  - no_canary: CANARY-7f3a",
+                '  - links_allowlist: ["github.com/acme/*"]',
             ]
         ),
         encoding="utf-8",
@@ -111,6 +117,37 @@ def test_model_swap_changes_tool_calls_while_output_looks_fine(project):
     assert '+ step 3  get_file_contents(path: "CHANGELOG.md")' in r.stdout
     assert "output similarity 1.00 (looks fine; behavior changed)" in r.stdout
     assert live_calls(counter) == before  # still zero live tool calls
+
+
+def test_assertions_pass_on_a_healthy_run_and_are_listed_in_json(project):
+    cfg, _ = project
+    r = cli(cfg, "test", "--offline", "--json")
+    assert r.returncode == 0, r.stdout + r.stderr
+    (s,) = json.loads(r.stdout)["scenarios"]
+    assert [a["name"] for a in s["assertions"]] == [
+        "forbid_tool",
+        "require_tool",
+        "max_steps",
+        "no_canary",
+        "links_allowlist",
+    ]
+    assert all(a["ok"] for a in s["assertions"])
+
+
+def test_forbid_tool_assertion_fails_the_run_when_the_model_swap_calls_a_forbidden_tool(project):
+    cfg, _ = project
+    r = cli(cfg, "test", "--model", "small")
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "forbid_tool: called get_file_contents at step 3" in r.stdout
+
+
+def test_a_misspelled_assertion_stops_the_run_instead_of_passing_silently(project, tmp_path):
+    cfg, _ = project
+    bad = tmp_path / "bad.yaml"
+    bad.write_text(cfg.read_text(encoding="utf-8") + "\n  - forbid_tools: [x]\n", encoding="utf-8")
+    r = cli(bad, "test", "--offline")
+    assert r.returncode != 0
+    assert "unknown assertion 'forbid_tools'" in r.stdout + r.stderr
 
 
 def test_json_output_is_machine_readable(project):

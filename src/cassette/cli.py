@@ -11,12 +11,13 @@ from typing import Any
 
 import click
 
+from .assertions import AssertionContext, run_assertions, validate_assertions
 from .cassette import read_cassette, read_scenario
 from .config import Config, load_dotenv
 from .config import load_config as _load_config
 from .differ import diff_cassettes, diff_lines, summary
 from .proxy import ProxyOptions, run_proxy
-from .runner import run_scenario
+from .runner import probe_live_schemas, run_scenario
 
 
 def _pick(cfg: Config, pattern: str | None) -> list[str]:
@@ -77,23 +78,41 @@ def record(scenario: str | None, config_path: str, model: str | None) -> None:
 @click.option("--model", help="Try a different model.")
 @click.option("--filter", "pattern", help="Only scenarios matching the glob.")
 @click.option("--json", "as_json", is_flag=True, help="Machine-readable output.")
+@click.option("--check-schemas", is_flag=True, help="List tools from the live servers to detect schema drift.")
 def test(
-    scenario: str | None, config_path: str, offline: bool, model: str | None, pattern: str | None, as_json: bool
+    scenario: str | None,
+    config_path: str,
+    offline: bool,
+    model: str | None,
+    pattern: str | None,
+    as_json: bool,
+    check_schemas: bool,
 ) -> None:
     """Replay scenarios against their cassettes."""
     cfg = load_config(config_path)
     ignore = cfg.diff.ignoreArgs
+    names = _pick(cfg, scenario or pattern)
+    try:  # a typo in an assertion name must stop the run, not silently skip the check
+        for sc in cfg.scenarios:
+            validate_assertions([*cfg.assertions, *sc.assertions])
+    except ValueError as e:
+        raise click.ClickException(str(e)) from e
+    live_schemas = asyncio.run(probe_live_schemas(cfg)) if check_schemas else None
     failed = 0
     report: list[dict[str, Any]] = []
-    for name in _pick(cfg, scenario or pattern):
+    for name in names:
         base = read_scenario(cfg.cassettes_path, name)
         run = asyncio.run(run_scenario(cfg, name, mode="replay", offline=offline, model=model, quiet=as_json))
         d = diff_cassettes(
             base, run.cassette, ignore_args=ignore, tolerance=cfg.diff.tolerance, fail_on=cfg.diff.failOn
         )
+        ctx = AssertionContext(
+            cassette=run.cassette, baseline=base, root=cfg.root, pricing=cfg.pricing, live_schemas=live_schemas
+        )
+        checks = run_assertions([*cfg.assertions, *cfg.scenario(name).assertions], ctx)
         # Offline replays every recorded model turn, so the output must reproduce exactly.
         output_broke = offline and not d.output_same
-        ok = run.exit_code == 0 and d.ok and not output_broke
+        ok = run.exit_code == 0 and d.ok and not output_broke and all(c.ok for c in checks)
         failed += not ok
         report.append(
             {
@@ -103,6 +122,15 @@ def test(
                 "outputSimilarity": d.output_similarity,
                 "counts": d.counts,
                 "divergences": run.divergences,
+                "assertions": [
+                    {
+                        "name": c.name,
+                        "ok": c.ok,
+                        "skipped": c.skipped,
+                        "failures": [f.message for f in c.failures] + ([c.error] if c.error else []),
+                    }
+                    for c in checks
+                ],
             }
         )
         if as_json:
@@ -114,6 +142,13 @@ def test(
             click.echo("    " + click.style(text, fg=_COLORS.get(style)))
         for dv in run.divergences:
             click.echo(f"    {click.style('!', fg='red')} {dv['reason']}")
+        for c in checks:
+            for f in c.failures:
+                click.echo(f"    {click.style('×', fg='red')} {c.name}: {f.message}")
+            if c.error:
+                click.echo(f"    {click.style('×', fg='red')} {c.name}: check crashed: {c.error}")
+            if c.skipped:
+                click.echo("    " + click.style(f"- {c.name}: skipped ({c.skipped})", fg="bright_black"))
         if run.exit_code != 0:
             click.echo(f"    agent exited with code {run.exit_code}")
         if output_broke:

@@ -134,3 +134,16 @@ async def _exec(command: str, cwd: Path, env: dict[str, str], quiet: bool) -> tu
     # Normalize CRLF so a cassette recorded on Windows still matches a replay on Linux CI.
     text = out.decode("utf-8", "replace").replace("\r\n", "\n")
     return code, text, b"".join(err_chunks).decode("utf-8", "replace")
+
+
+async def probe_live_schemas(cfg: Config) -> dict[str, list[dict[str, Any]]]:
+    """List tools (never call them) on each live server, for `schema_unchanged`. Needs the real servers reachable."""
+    from .proxy.backend import StdioServerSpec, open_live
+
+    out: dict[str, list[dict[str, Any]]] = {}
+    for name, server in cfg.servers.items():
+        command, args = server.split()
+        spec = StdioServerSpec(command, args, {k: expand_env(v) for k, v in server.env.items()})
+        async with open_live(spec) as live:
+            out[name] = [{"name": t["name"], "inputSchema": t.get("inputSchema")} for t in await live.list_tools()]
+    return out
