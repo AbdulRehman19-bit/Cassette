@@ -41,7 +41,8 @@ def main() -> None:
 def load_config(path: str) -> Config:
     """Load the config, plus any `.env` next to it or in the working directory."""
     cfg = _load_config(path)
-    load_dotenv(cfg.root / ".env", Path.cwd() / ".env")
+    # Nearest .env wins: config dir, then each parent up to the filesystem root, then the working directory.
+    load_dotenv(*(d / ".env" for d in (cfg.root, *cfg.root.parents)), Path.cwd() / ".env")
     return cfg
 
 

@@ -1,7 +1,7 @@
 """Usage: python -m changelogcat <owner/repo> <fromTag> <toTag>  (or env REPO, FROM_TAG, TO_TAG)
 
 Provider is chosen by env PROVIDER: `anthropic` (default, needs ANTHROPIC_API_KEY) or `groq` (needs GROQ_API_KEY).
-MODEL picks the model, e.g. claude-sonnet-5-5 or llama-3.3-70b-versatile.
+MODEL picks the model, e.g. claude-sonnet-5-5 or openai/gpt-oss-120b.
 """
 
 import asyncio
@@ -13,7 +13,7 @@ from cassette.model import maybe_wrap_model
 
 from .agent import connect_github, run_agent
 
-DEFAULT_MODELS = {"anthropic": "claude-sonnet-5-5", "groq": "llama-3.3-70b-versatile"}
+DEFAULT_MODELS = {"anthropic": "claude-sonnet-5-5", "groq": "openai/gpt-oss-120b"}
 
 
 def make_client(provider: str) -> Any:

@@ -62,3 +62,17 @@ async def test_stops_at_the_step_limit() -> None:
     r = await run_agent("a/b", "v1", "v2", host=Host(), client=client, model="m", max_steps=3)
     assert r.stopped_by_limit
     assert r.steps == 3
+
+
+async def test_final_step_forbids_more_tool_calls():
+    seen: list[dict[str, Any]] = []
+
+    class Spy(Scripted):
+        async def create(self, **kw: Any) -> dict[str, Any]:
+            seen.append(kw)
+            return await super().create(**kw)
+
+    client = Spy([use("list_pull_requests")] * 5)
+    await run_agent("a/b", "v1", "v2", host=Host(), client=client, model="m", max_steps=3)
+    assert ["tool_choice" in p for p in seen] == [False, False, True]
+    assert seen[-1]["tool_choice"] == {"type": "none"}

@@ -63,6 +63,9 @@ def to_openai_request(params: dict[str, Any]) -> dict[str, Any]:
             }
             for t in tools
         ]
+    choice = (params.get("tool_choice") or {}).get("type")
+    if choice in ("none", "auto") and req.get("tools"):
+        req["tool_choice"] = choice
     if "max_tokens" in params:
         req["max_tokens"] = params["max_tokens"]
     return req
@@ -115,4 +118,4 @@ def groq_client(api_key: str, *, base_url: str = GROQ_BASE_URL) -> AnthropicShap
     """Groq via its OpenAI-compatible endpoint; temperature 0 and a fixed seed keep replays as stable as it allows."""
     from openai import AsyncOpenAI
 
-    return AnthropicShapedClient(AsyncOpenAI(api_key=api_key, base_url=base_url))
+    return AnthropicShapedClient(AsyncOpenAI(api_key=api_key, base_url=base_url, max_retries=6))

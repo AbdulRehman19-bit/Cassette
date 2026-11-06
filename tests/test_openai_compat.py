@@ -91,3 +91,9 @@ async def test_client_sends_deterministic_settings_and_returns_anthropic_shape()
     assert res["content"][0]["text"] == "ok"
     assert fake.calls[0]["temperature"] == 0 and fake.calls[0]["seed"] == 0
     json.dumps(res)  # stays JSON-serializable for the trace
+
+
+def test_tool_choice_none_is_forwarded_only_when_tools_exist():
+    assert to_openai_request({**PARAMS, "tool_choice": {"type": "none"}})["tool_choice"] == "none"
+    no_tools = {k: v for k, v in PARAMS.items() if k != "tools"}
+    assert "tool_choice" not in to_openai_request({**no_tools, "tool_choice": {"type": "none"}})

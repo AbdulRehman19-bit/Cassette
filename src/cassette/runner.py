@@ -59,6 +59,9 @@ async def run_scenario(
         env = {**os.environ, **cfg.agent.env, TRACE_ENV: str(trace), "CASSETTE_INPUT": json.dumps(scenario.input)}
         # `python` in an agent command should be the interpreter Cassette runs under (e.g. the project venv).
         env["PATH"] = str(Path(sys.executable).parent) + os.pathsep + env.get("PATH", "")
+        # Cassette reads agent stdout as UTF-8; make Python agents write it that way even on cp1252 Windows consoles.
+        env.setdefault("PYTHONUTF8", "1")
+        env.setdefault("PYTHONIOENCODING", "utf-8")
         if model:
             env["MODEL"] = model
         for k, v in scenario.input.items():

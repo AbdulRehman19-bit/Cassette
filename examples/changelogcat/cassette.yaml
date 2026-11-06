@@ -1,14 +1,14 @@
 agent:
   command: "python -m changelogcat"
-  env: { PROVIDER: "groq", MODEL: "llama-3.3-70b-versatile" }
+  env: { PROVIDER: "groq", MODEL: "openai/gpt-oss-120b" }
 servers:
   github:
     transport: stdio
     command: "npx -y @modelcontextprotocol/server-github"
     env: { GITHUB_PERSONAL_ACCESS_TOKEN: "${GITHUB_TOKEN}" }
 scenarios:
-  - name: release-example
-    input: { repo: "OWNER/REPO", fromTag: "v0.0.1", toTag: "v0.0.2" }
+  - name: multimodal-doc-intel-v2.0.0
+    input: { repo: "AbdulRehman19-bit/multimodal-doc-intel", fromTag: "v1.0.0", toTag: "v2.0.0" }
 diff:
   ignoreArgs: ["per_page"]
   failOn: [tool_added, tool_removed, tool_args_changed]
