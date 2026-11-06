@@ -9,7 +9,7 @@ import sys
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import get_default_environment, stdio_client
 
-from cassette.model import maybe_wrap_model
+from cassette.model import jsonable, maybe_wrap_model
 
 
 class FakeMessages:
@@ -47,8 +47,8 @@ async def main() -> None:
         await session.list_tools()
         messages: list[dict] = [{"role": "user", "content": "go"}]
         while True:
-            res = model.messages.create(messages=messages)
-            block = res["content"][0] if isinstance(res, dict) else res.content[0]
+            res = jsonable(model.messages.create(messages=messages))
+            block = res["content"][0]
             messages.append({"role": "assistant", "content": [dict(block)]})
             if block["type"] != "tool_use":
                 sys.stdout.write(block["text"] + "\n")

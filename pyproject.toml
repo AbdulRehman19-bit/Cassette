@@ -19,7 +19,14 @@ openai = ["openai>=1.50"]
 cassette = "cassette.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=8", "pytest-asyncio>=0.24", "ruff>=0.7", "mypy>=1.11", "types-pyyaml"]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.7",
+    "mypy>=1.11",
+    "types-pyyaml",
+    "anthropic>=2.6.0",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -31,11 +38,11 @@ packages = ["src/cassette"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-testpaths = ["tests"]
+testpaths = ["tests", "examples/changelogcat/tests"]
 
 [tool.ruff]
 line-length = 120
-src = ["src", "tests"]
+src = ["src", "tests", "examples/changelogcat"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "ASYNC"]

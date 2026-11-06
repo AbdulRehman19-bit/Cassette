@@ -1,6 +1,6 @@
 # Cassette — Phased Plan
 
-Source: `Cassette — Project Spec.pdf` (4 weeks, ~20 working days). Each phase ends at a gate. If a gate slips, cut stretch items, never the week-4 proof PRs.
+Source: `Cassette — Project Spec.pdf` (4 weeks, ~20 working days). **Backend switched from TypeScript to Python on 2026-11-06** — wherever the spec names TS tooling, read the Python equivalent in `CLAUDE.md` (uv, pytest, click, pydantic, `mcp` Python SDK; report is a Python-generated single HTML file). Each phase ends at a gate. If a gate slips, cut stretch items, never the week-4 proof PRs.
 
 **Done =** published on npm, runs as a GitHub Action, and has caught one model-swap regression and one injection attack in public PRs on a live ChangelogCat.
 
@@ -11,20 +11,20 @@ Source: `Cassette — Project Spec.pdf` (4 weeks, ~20 working days). Each phase 
 - Decide open items (see "Open questions" below).
 - Create GitHub repo, npm name check (`cassette`), Anthropic API key, a read-only GitHub token for the agent.
 
-## Phase 1 — Scaffold + ChangelogCat v0 (Days 1–2)
-- pnpm workspaces, Node 22, TypeScript, tsup, Vitest, lint, CI.
+## Phase 1 — Scaffold + ChangelogCat v0 (Days 1–2) — DONE (ported to Python)
+- uv + hatchling, pytest, ruff, mypy, CI (ubuntu+windows, py3.11+3.13).
 - Layout: `packages/{core,cli,report}`, `action/`, `examples/changelogcat/`, `docs/`.
 - `CLAUDE.md` (goals, non-goals, stack, layout, determinism rules).
 - ChangelogCat v0: Anthropic SDK loop, GitHub MCP (stdio), read-only tools (`list_pull_requests`, `get_pull_request`, `get_pull_request_diff`, `get_file_contents`), max 12 steps, Markdown output.
 - **Gate:** ChangelogCat produces release notes locally on one repo.
 
-## Phase 2 — Record (Days 2–4)
+## Phase 2 — Record (Days 2–4) — DONE
 - MCP proxy, record mode (stdio): forwards and logs (`core/src/proxy`).
 - Model wrapper: logs request, response, tokens, latency (`core/src/model`).
 - Cassette schema (zod), store, normalization of volatile fields: timestamps, IDs, key order (`core/src/cassette`).
 - Capture `toolSchemas` at record time.
 
-## Phase 3 — Replay + CLI core (Days 4–5)
+## Phase 3 — Replay + CLI core (Days 4–5) — DONE except 3 real baselines (needs tokens)
 - Replay mode with the exact-args matcher; unmatched calls are reported as divergence.
 - `cassette record`, `cassette test`; `cassette.yaml` config (yaml + zod).
 - Record 3 real releases as baselines.

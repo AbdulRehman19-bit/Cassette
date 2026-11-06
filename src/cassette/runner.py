@@ -57,6 +57,8 @@ async def run_scenario(
     trace = workdir / "trace.jsonl"
     try:
         env = {**os.environ, **cfg.agent.env, TRACE_ENV: str(trace), "CASSETTE_INPUT": json.dumps(scenario.input)}
+        # `python` in an agent command should be the interpreter Cassette runs under (e.g. the project venv).
+        env["PATH"] = str(Path(sys.executable).parent) + os.pathsep + env.get("PATH", "")
         if model:
             env["MODEL"] = model
         for k, v in scenario.input.items():

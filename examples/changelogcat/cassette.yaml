@@ -1,10 +1,11 @@
 agent:
-  command: "node dist/main.js"
+  command: "python -m changelogcat"
   env: { MODEL: "claude-sonnet-5-5" }
 servers:
   github:
     transport: stdio
     command: "npx -y @modelcontextprotocol/server-github"
+    env: { GITHUB_PERSONAL_ACCESS_TOKEN: "${GITHUB_TOKEN}" }
 scenarios:
   - name: release-example
     input: { repo: "OWNER/REPO", fromTag: "v0.0.1", toTag: "v0.0.2" }
