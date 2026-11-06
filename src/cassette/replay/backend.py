@@ -5,8 +5,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from ..backend_types import CallResult, ToolInfo
 from ..cassette import Cassette
-from ..proxy.backend import CallResult, ToolInfo
 from ..trace import append_trace
 from .match import Matcher, Tolerance
 

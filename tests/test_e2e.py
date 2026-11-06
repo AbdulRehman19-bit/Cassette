@@ -100,6 +100,43 @@ def test_cli_offline_test_passes_and_reports_identical_output(project):
     assert live_calls(counter) == before
 
 
+def test_model_swap_changes_tool_calls_while_output_looks_fine(project):
+    """The headline: the final text is unchanged, but the agent now calls a different tool."""
+    cfg, counter = project
+    before = live_calls(counter)
+    r = cli(cfg, "test", "--model", "small")
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "trajectory changed" in r.stdout
+    assert "- step 3  get_pull_request(number: 7)" in r.stdout
+    assert '+ step 3  get_file_contents(path: "CHANGELOG.md")' in r.stdout
+    assert "output similarity 1.00 (looks fine; behavior changed)" in r.stdout
+    assert live_calls(counter) == before  # still zero live tool calls
+
+
+def test_json_output_is_machine_readable(project):
+    cfg, _ = project
+    r = cli(cfg, "test", "--model", "small", "--json")
+    data = json.loads(r.stdout)
+    assert data["passed"] is False
+    (s,) = data["scenarios"]
+    assert s["scenario"] == "basic" and s["counts"]["tool_removed"] == 1 and s["counts"]["tool_added"] == 1
+
+
+def test_cassette_diff_command_compares_two_files(project, cfg_obj):
+    cfg, _ = project
+    a = cfg_obj.cassettes_path / "basic.cassette.json"
+    data = json.loads(a.read_text(encoding="utf-8"))
+    data["steps"] = [s for s in data["steps"] if s.get("name") != "get_pull_request"]
+    b = a.with_name("other.cassette.json")
+    b.write_text(json.dumps(data), encoding="utf-8")
+    r = subprocess.run(
+        [sys.executable, "-m", "cassette", "diff", str(a), str(b)], capture_output=True, text=True, encoding="utf-8"
+    )
+    assert r.returncode == 0, r.stderr
+    assert "- step 3  get_pull_request(number: 7)" in r.stdout
+    b.unlink()
+
+
 def test_unrecorded_call_is_a_divergence_and_exits_1(project, cfg_obj):
     cfg, _ = project
     path = cfg_obj.cassettes_path / "basic.cassette.json"

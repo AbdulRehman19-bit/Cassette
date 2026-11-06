@@ -37,6 +37,19 @@ def build_cassette(
                     ms=ev.get("ms"),
                 )
             )
+        elif kind == "divergence":
+            # The agent made a call the cassette had no answer for; keep it in the trajectory so the diff sees it.
+            steps.append(
+                _present(
+                    i=len(steps),
+                    type="tool",
+                    server=ev["server"],
+                    name=ev["name"],
+                    args=ev.get("args") or {},
+                    result={"content": [{"type": "text", "text": ev.get("reason", "")}], "isError": True},
+                    isError=True,
+                )
+            )
         elif kind == "tool":
             steps.append(
                 _present(

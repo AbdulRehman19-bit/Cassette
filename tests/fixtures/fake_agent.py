@@ -24,7 +24,21 @@ class FakeMessages:
                 "input": {"state": "closed"},
             }
         elif turn == 1:
-            block = {"type": "tool_use", "id": "toolu_aaaaaaaa2", "name": "get_pull_request", "input": {"number": 7}}
+            # A "smaller model" reads a file instead of the PR: different behavior, same final text.
+            if os.environ.get("MODEL") == "small":
+                block = {
+                    "type": "tool_use",
+                    "id": "toolu_aaaaaaaa2",
+                    "name": "get_file_contents",
+                    "input": {"path": "CHANGELOG.md"},
+                }
+            else:
+                block = {
+                    "type": "tool_use",
+                    "id": "toolu_aaaaaaaa2",
+                    "name": "get_pull_request",
+                    "input": {"number": 7},
+                }
         else:
             block = {"type": "text", "text": "## New\n- Dark mode"}
         return {"id": f"msg_aaaaaaaa{turn}", "type": "message", "role": "assistant", "content": [block],

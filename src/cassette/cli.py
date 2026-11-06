@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import asyncio
 import fnmatch
+import json
 import sys
 from typing import Any
 
 import click
 
-from .cassette import read_scenario
+from .cassette import read_cassette, read_scenario
 from .config import Config, load_config
+from .differ import diff_cassettes, diff_lines, summary
 from .proxy import ProxyOptions, run_proxy
 from .runner import run_scenario
 
@@ -34,6 +36,7 @@ def main() -> None:
             stream.reconfigure(encoding="utf-8", errors="replace")
 
 
+_COLORS = {"add": "green", "remove": "red", "info": "yellow", "dim": "bright_black", "bad": "red"}
 config_opt = click.option("-c", "--config", "config_path", default="cassette.yaml", help="Config file.")
 
 
@@ -63,26 +66,69 @@ def record(scenario: str | None, config_path: str, model: str | None) -> None:
 @click.option("--offline", is_flag=True, help="Also replay the recorded model (no API calls).")
 @click.option("--model", help="Try a different model.")
 @click.option("--filter", "pattern", help="Only scenarios matching the glob.")
-def test(scenario: str | None, config_path: str, offline: bool, model: str | None, pattern: str | None) -> None:
+@click.option("--json", "as_json", is_flag=True, help="Machine-readable output.")
+def test(
+    scenario: str | None, config_path: str, offline: bool, model: str | None, pattern: str | None, as_json: bool
+) -> None:
     """Replay scenarios against their cassettes."""
     cfg = load_config(config_path)
+    ignore = cfg.diff.ignoreArgs
     failed = 0
+    report: list[dict[str, Any]] = []
     for name in _pick(cfg, scenario or pattern):
         base = read_scenario(cfg.cassettes_path, name)
-        run = asyncio.run(run_scenario(cfg, name, mode="replay", offline=offline, model=model))
-        same_output = run.cassette.output == base.output
-        ok = run.exit_code == 0 and not run.divergences and (not offline or same_output)
+        run = asyncio.run(run_scenario(cfg, name, mode="replay", offline=offline, model=model, quiet=as_json))
+        d = diff_cassettes(
+            base, run.cassette, ignore_args=ignore, tolerance=cfg.diff.tolerance, fail_on=cfg.diff.failOn
+        )
+        # Offline replays every recorded model turn, so the output must reproduce exactly.
+        output_broke = offline and not d.output_same
+        ok = run.exit_code == 0 and d.ok and not output_broke
         failed += not ok
-        calls = len(run.cassette.tool_steps())
-        extra = (", output identical" if same_output else ", output differs") if offline else ""
+        report.append(
+            {
+                "scenario": name,
+                "ok": ok,
+                "agentExitCode": run.exit_code,
+                "outputSimilarity": d.output_similarity,
+                "counts": d.counts,
+                "divergences": run.divergences,
+            }
+        )
+        if as_json:
+            continue
         mark = click.style("✓", fg="green") if ok else click.style("×", fg="red")
-        click.echo(f"{mark} {name}  {calls} tool calls replayed, {len(run.divergences)} divergences{extra}")
-        for d in run.divergences:
-            click.echo(f"    {click.style('!', fg='red')} {d['reason']}")
+        suffix = ", output identical" if offline and d.output_same else ""
+        click.echo(f"{mark} {name}  {summary(d)}{suffix}")
+        for style, text in diff_lines(d, ignore):
+            click.echo("    " + click.style(text, fg=_COLORS.get(style)))
+        for dv in run.divergences:
+            click.echo(f"    {click.style('!', fg='red')} {dv['reason']}")
         if run.exit_code != 0:
             click.echo(f"    agent exited with code {run.exit_code}")
-    click.echo(click.style(f"{failed} failed", fg="red") if failed else click.style("all passed", fg="green"))
+        if output_broke:
+            click.echo(f"    {click.style('!', fg='red')} offline output differs from the recording")
+    if as_json:
+        click.echo(json.dumps({"passed": not failed, "scenarios": report}, indent=2))
+    else:
+        click.echo(click.style(f"{failed} failed", fg="red") if failed else click.style("all passed", fg="green"))
     sys.exit(1 if failed else 0)
+
+
+@main.command()
+@click.argument("a", type=click.Path(exists=True, dir_okay=False))
+@click.argument("b", type=click.Path(exists=True, dir_okay=False))
+@click.option("--ignore-args", default="", help="Comma-separated argument names to ignore.")
+def diff(a: str, b: str, ignore_args: str) -> None:
+    """Diff two cassette files in the terminal."""
+    ignore = [x for x in ignore_args.split(",") if x]
+    d = diff_cassettes(read_cassette(a), read_cassette(b), ignore_args=ignore)
+    click.echo(f"{a} → {b}  {summary(d)}")
+    lines = diff_lines(d, ignore)
+    for style, text in lines:
+        click.echo("    " + click.style(text, fg=_COLORS.get(style)))
+    if not lines:
+        click.echo("    no differences")
 
 
 @main.command(hidden=True)

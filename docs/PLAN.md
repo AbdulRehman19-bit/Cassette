@@ -30,7 +30,7 @@ Source: `Cassette — Project Spec.pdf` (4 weeks, ~20 working days). **Backend s
 - Record 3 real releases as baselines.
 - **Gate (Week 1):** replaying a recorded run makes zero live tool calls and reaches the same final output. Replaying twice gives the same result.
 
-## Phase 4 — Diff (Days 6–7)
+## Phase 4 — Diff (Days 6–7) — DONE
 - Sequence alignment on tool name + args; added, removed, changed steps.
 - `ignoreArgs`, `tolerance`, `failOn`; output similarity for text.
 - Terminal diff output; `cassette diff <a> <b>`.

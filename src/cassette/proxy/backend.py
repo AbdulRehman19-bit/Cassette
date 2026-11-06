@@ -6,19 +6,14 @@ import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import Any
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import get_default_environment, stdio_client
 
-ToolInfo = dict[str, Any]  # {"name", "description"?, "inputSchema"}
-CallResult = dict[str, Any]  # {"content": [...], "isError"?: True}
+from ..backend_types import CallResult, ToolBackend, ToolInfo
 
-
-class ToolBackend(Protocol):
-    async def list_tools(self) -> list[ToolInfo]: ...
-
-    async def call_tool(self, name: str, args: dict[str, Any]) -> CallResult: ...
+__all__ = ["CallResult", "LiveBackend", "StdioServerSpec", "ToolBackend", "ToolInfo", "open_live"]
 
 
 @dataclass

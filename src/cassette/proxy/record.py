@@ -4,8 +4,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from ..backend_types import CallResult, ToolBackend, ToolInfo
 from ..trace import append_trace
-from .backend import CallResult, ToolBackend, ToolInfo
 
 
 class RecordingBackend:
