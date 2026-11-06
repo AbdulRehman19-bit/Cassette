@@ -40,7 +40,7 @@ Source: `Cassette — Project Spec.pdf` (4 weeks, ~20 working days). **Backend s
 - Day 9: `tool_sequence`, `output_matches`, `schema_unchanged`, `custom`.
 - Deterministic only; no LLM judge.
 
-## Phase 6 — Report + flags (Days 9–10)
+## Phase 6 — Report + flags (Days 9–10) — DONE (HTML report, PR comment, update, report; gate needs a real smaller-model run)
 - Static HTML report (Preact + Vite, inlined single file): per-scenario cards, side-by-side trajectory, highlighted divergence, expandable args/results, output diff, token/cost/latency deltas.
 - `cassette update`, `cassette report`, `--offline` (recorded model), `--model`, `--json`, `--filter`.
 - **Gate (Week 2):** `--model` set to a smaller model shows a readable trajectory diff in terminal and HTML.

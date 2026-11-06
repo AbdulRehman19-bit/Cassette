@@ -57,6 +57,7 @@ def cli(cfg: Path, *args: str) -> subprocess.CompletedProcess[str]:
         text=True,
         encoding="utf-8",
         timeout=60,
+        cwd=cfg.parent,  # reports land beside the test config, not in the repo
     )
 
 
@@ -150,13 +151,69 @@ def test_a_misspelled_assertion_stops_the_run_instead_of_passing_silently(projec
     assert "unknown assertion 'forbid_tools'" in r.stdout + r.stderr
 
 
+def test_a_failing_run_writes_json_html_and_pr_comment(project):
+    cfg, _ = project
+    r = cli(cfg, "test", "--model", "small")
+    assert r.returncode == 1
+    report = cfg.parent / "cassette-report"
+    data = json.loads((report / "results.json").read_text(encoding="utf-8"))
+    assert data["passed"] is False and data["summary"]["changed"] == 1
+    html = (report / "index.html").read_text(encoding="utf-8")
+    assert "<script" not in html and "http://" not in html.replace(
+        "http://www.w3.org", ""
+    )  # self-contained, no network
+    assert "get_file_contents" in html and "behavior changed" in html and "FAIL" in html
+    comment = (report / "comment.md").read_text(encoding="utf-8")
+    assert comment.startswith("<!-- cassette-report -->")
+    assert "### ❌ Cassette: 1 changed" in comment
+    assert "- step 3  get_pull_request(number: 7)" in comment
+    assert '+ step 3  get_file_contents(path: "CHANGELOG.md")' in comment
+    assert "forbid_tool" in comment
+
+
+def test_report_command_rebuilds_files_and_adds_the_link(project):
+    cfg, _ = project
+    cli(cfg, "test", "--model", "small")
+    report = cfg.parent / "cassette-report"
+    (report / "comment.md").unlink()
+    (report / "index.html").unlink()
+    r = subprocess.run(
+        [sys.executable, "-m", "cassette", "report", "--url", "https://example.test/run/1"],
+        capture_output=True, text=True, encoding="utf-8", cwd=cfg.parent,
+    )  # fmt: skip
+    assert r.returncode == 0, r.stderr
+    assert "[Open the full report](https://example.test/run/1)" in (report / "comment.md").read_text(encoding="utf-8")
+    assert (report / "index.html").exists()
+
+
+def test_report_command_without_a_prior_run_explains_itself(tmp_path):
+    r = subprocess.run(
+        [sys.executable, "-m", "cassette", "report"], capture_output=True, text=True, encoding="utf-8", cwd=tmp_path
+    )
+    assert r.returncode != 0 and "run `cassette test` first" in r.stderr
+
+
+def test_update_refuses_a_run_with_unrecorded_calls_then_accepts_a_clean_one(project, cfg_obj):
+    cfg, _ = project
+    base_file = cfg_obj.cassettes_path / "basic.cassette.json"
+    before = base_file.read_bytes()
+    cli(cfg, "test", "--model", "small")  # the swapped model calls get_file_contents: no recorded answer
+    r = cli(cfg, "update")
+    assert "had no answer for" in r.stdout and base_file.read_bytes() == before
+
+    cli(cfg, "test", "--offline")  # a clean run
+    r = cli(cfg, "update")
+    assert "baseline updated" in r.stdout and "1 baseline(s) updated" in r.stdout
+    assert cli(cfg, "test", "--offline").returncode == 0
+
+
 def test_json_output_is_machine_readable(project):
     cfg, _ = project
     r = cli(cfg, "test", "--model", "small", "--json")
     data = json.loads(r.stdout)
     assert data["passed"] is False
     (s,) = data["scenarios"]
-    assert s["scenario"] == "basic" and s["counts"]["tool_removed"] == 1 and s["counts"]["tool_added"] == 1
+    assert s["name"] == "basic" and s["counts"]["tool_removed"] == 1 and s["counts"]["tool_added"] == 1
 
 
 def test_cassette_diff_command_compares_two_files(project, cfg_obj):

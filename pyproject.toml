@@ -58,3 +58,4 @@ plugins = ["pydantic.mypy"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["E501"]
+"src/cassette/report/html.py" = ["E501"]  # embedded CSS

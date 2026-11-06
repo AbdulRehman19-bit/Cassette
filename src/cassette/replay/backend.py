@@ -55,7 +55,8 @@ class ReplayBackend:
                 "name": name,
                 "args": args,
                 "result": result,
-                "ms": round((time.perf_counter() - start) * 1000),
+                # Replay answers instantly; report the recorded latency so runs compare like for like.
+                "ms": hit.ms if hit.ms is not None else round((time.perf_counter() - start) * 1000),
             }
             if hit.isError:
                 event["isError"] = True

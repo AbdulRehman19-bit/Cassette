@@ -17,7 +17,7 @@ def fmt_call(s: ToolStep, ignore_args: list[str] | None = None) -> str:
     return f"{s.name}({args})"
 
 
-def _args_delta(old: dict[str, Any], new: dict[str, Any]) -> str:
+def args_delta(old: dict[str, Any], new: dict[str, Any]) -> str:
     parts = []
     for k in sorted(set(old) | set(new)):
         if old.get(k) != new.get(k):
@@ -36,7 +36,7 @@ def entry_lines(e: DiffEntry, ignore_args: list[str] | None = None) -> list[Line
         return [
             ("remove", f"- step {e.base.i}  {fmt_call(e.base, ignore_args)}"),
             ("add", f"+ step {e.new.i}  {fmt_call(e.new, ignore_args)}"),
-            ("dim", f"  args changed: {_args_delta(e.base.args, e.new.args)}"),
+            ("dim", f"  args changed: {args_delta(e.base.args, e.new.args)}"),
         ]
     if e.kind == "result_changed" and e.new:
         return [("info", f"~ step {e.new.i}  {e.new.name}: same call, different result")]

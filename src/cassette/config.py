@@ -39,6 +39,8 @@ class Scenario(_Model):
     input: dict[str, Any] = Field(default_factory=dict)
     # Extra assertions that apply only to this scenario (e.g. attack fixtures), on top of the global ones.
     assertions: list[dict[str, Any]] = Field(default_factory=list)
+    # Marks an adversarial scenario (e.g. an injection fixture); the report counts failures here as "attacks caught".
+    attack: bool = False
 
 
 class DiffConfig(_Model):

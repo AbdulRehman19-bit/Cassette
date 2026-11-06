@@ -7,7 +7,7 @@ from .diff import (
     diff_cassettes,
     output_similarity,
 )
-from .format import Line, diff_lines, entry_lines, fmt_call, summary
+from .format import Line, args_delta, diff_lines, entry_lines, fmt_call, summary
 
 __all__ = [
     "DEFAULT_FAIL_ON",
@@ -17,6 +17,7 @@ __all__ = [
     "Totals",
     "TrajectoryDiff",
     "diff_cassettes",
+    "args_delta",
     "diff_lines",
     "entry_lines",
     "fmt_call",

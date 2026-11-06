@@ -11,12 +11,14 @@ from typing import Any
 
 import click
 
-from .assertions import AssertionContext, run_assertions, validate_assertions
-from .cassette import read_cassette, read_scenario
+from .assertions import validate_assertions
+from .cassette import ToolStep, cassette_path, read_cassette, read_scenario, write_cassette
 from .config import Config, load_dotenv
 from .config import load_config as _load_config
 from .differ import diff_cassettes, diff_lines, summary
+from .evaluate import ScenarioResult, evaluate_scenario
 from .proxy import ProxyOptions, run_proxy
+from .report import build_report, load_report, write_report
 from .runner import probe_live_schemas, run_scenario
 
 
@@ -71,6 +73,14 @@ def record(scenario: str | None, config_path: str, model: str | None) -> None:
     sys.exit(1 if failed else 0)
 
 
+report_dir_opt = click.option(
+    "--report-dir",
+    default="cassette-report",
+    show_default=True,
+    help="Where results.json, index.html and comment.md go.",
+)
+
+
 @main.command()
 @click.argument("scenario", required=False)
 @config_opt
@@ -79,6 +89,8 @@ def record(scenario: str | None, config_path: str, model: str | None) -> None:
 @click.option("--filter", "pattern", help="Only scenarios matching the glob.")
 @click.option("--json", "as_json", is_flag=True, help="Machine-readable output.")
 @click.option("--check-schemas", is_flag=True, help="List tools from the live servers to detect schema drift.")
+@report_dir_opt
+@click.option("--no-report", is_flag=True, help="Don't write the report files.")
 def test(
     scenario: str | None,
     config_path: str,
@@ -87,6 +99,8 @@ def test(
     pattern: str | None,
     as_json: bool,
     check_schemas: bool,
+    report_dir: str,
+    no_report: bool,
 ) -> None:
     """Replay scenarios against their cassettes."""
     cfg = load_config(config_path)
@@ -98,66 +112,98 @@ def test(
     except ValueError as e:
         raise click.ClickException(str(e)) from e
     live_schemas = asyncio.run(probe_live_schemas(cfg)) if check_schemas else None
-    failed = 0
-    report: list[dict[str, Any]] = []
+    results: list[ScenarioResult] = []
     for name in names:
         base = read_scenario(cfg.cassettes_path, name)
         run = asyncio.run(run_scenario(cfg, name, mode="replay", offline=offline, model=model, quiet=as_json))
-        d = diff_cassettes(
-            base, run.cassette, ignore_args=ignore, tolerance=cfg.diff.tolerance, fail_on=cfg.diff.failOn
-        )
-        ctx = AssertionContext(
-            cassette=run.cassette, baseline=base, root=cfg.root, pricing=cfg.pricing, live_schemas=live_schemas
-        )
-        checks = run_assertions([*cfg.assertions, *cfg.scenario(name).assertions], ctx)
-        # Offline replays every recorded model turn, so the output must reproduce exactly.
-        output_broke = offline and not d.output_same
-        ok = run.exit_code == 0 and d.ok and not output_broke and all(c.ok for c in checks)
-        failed += not ok
-        report.append(
-            {
-                "scenario": name,
-                "ok": ok,
-                "agentExitCode": run.exit_code,
-                "outputSimilarity": d.output_similarity,
-                "counts": d.counts,
-                "divergences": run.divergences,
-                "assertions": [
-                    {
-                        "name": c.name,
-                        "ok": c.ok,
-                        "skipped": c.skipped,
-                        "failures": [f.message for f in c.failures] + ([c.error] if c.error else []),
-                    }
-                    for c in checks
-                ],
-            }
-        )
-        if as_json:
-            continue
-        mark = click.style("✓", fg="green") if ok else click.style("×", fg="red")
-        suffix = ", output identical" if offline and d.output_same else ""
-        click.echo(f"{mark} {name}  {summary(d)}{suffix}")
-        for style, text in diff_lines(d, ignore):
-            click.echo("    " + click.style(text, fg=_COLORS.get(style)))
-        for dv in run.divergences:
-            click.echo(f"    {click.style('!', fg='red')} {dv['reason']}")
-        for c in checks:
-            for f in c.failures:
-                click.echo(f"    {click.style('×', fg='red')} {c.name}: {f.message}")
-            if c.error:
-                click.echo(f"    {click.style('×', fg='red')} {c.name}: check crashed: {c.error}")
-            if c.skipped:
-                click.echo("    " + click.style(f"- {c.name}: skipped ({c.skipped})", fg="bright_black"))
-        if run.exit_code != 0:
-            click.echo(f"    agent exited with code {run.exit_code}")
-        if output_broke:
-            click.echo(f"    {click.style('!', fg='red')} offline output differs from the recording")
+        res = evaluate_scenario(cfg, name, base, run, offline=offline, live_schemas=live_schemas)
+        results.append(res)
+        if not no_report:  # keep the run so `cassette update` can accept it as the new baseline
+            write_cassette(Path(report_dir) / "runs", run.cassette)
+        if not as_json:
+            _print_result(res, ignore)
+
+    report = build_report(results, offline=offline, model=model)
+    if not no_report:
+        paths = write_report(report, report_dir)
     if as_json:
-        click.echo(json.dumps({"passed": not failed, "scenarios": report}, indent=2))
+        click.echo(json.dumps(report, indent=2, ensure_ascii=False))
     else:
+        failed = report["summary"]["failed"]
         click.echo(click.style(f"{failed} failed", fg="red") if failed else click.style("all passed", fg="green"))
-    sys.exit(1 if failed else 0)
+        if not no_report:
+            click.echo(click.style(f"report: {paths['html']}", fg="bright_black"))
+    sys.exit(0 if report["passed"] else 1)
+
+
+def _print_result(res: ScenarioResult, ignore: list[str]) -> None:
+    mark = click.style("✓", fg="green") if res.ok else click.style("×", fg="red")
+    suffix = ", output identical" if res.offline and res.diff.output_same else ""
+    click.echo(f"{mark} {res.name}  {summary(res.diff)}{suffix}")
+    for style, text in diff_lines(res.diff, ignore):
+        click.echo("    " + click.style(text, fg=_COLORS.get(style)))
+    for dv in res.divergences:
+        click.echo(f"    {click.style('!', fg='red')} {dv['reason']}")
+    for c in res.checks:
+        for f in c.failures:
+            click.echo(f"    {click.style('×', fg='red')} {c.name}: {f.message}")
+        if c.error:
+            click.echo(f"    {click.style('×', fg='red')} {c.name}: check crashed: {c.error}")
+        if c.skipped:
+            click.echo("    " + click.style(f"- {c.name}: skipped ({c.skipped})", fg="bright_black"))
+    if res.agent_exit_code != 0:
+        click.echo(f"    agent exited with code {res.agent_exit_code}")
+    if res.output_broke:
+        click.echo(f"    {click.style('!', fg='red')} offline output differs from the recording")
+
+
+@main.command()
+@report_dir_opt
+@click.option("--url", help="Link to put in the PR comment (e.g. the workflow artifact).")
+def report(report_dir: str, url: str | None) -> None:
+    """Rebuild the HTML report and PR comment from the last run."""
+    try:
+        data = load_report(report_dir)
+    except FileNotFoundError:
+        raise click.ClickException(f"no results in {report_dir}; run `cassette test` first") from None
+    paths = write_report(data, report_dir, url)
+    click.echo(f"rebuilt {paths['html']} and {paths['comment']}")
+
+
+@main.command()
+@click.argument("scenario", required=False)
+@config_opt
+@report_dir_opt
+@click.option("--filter", "pattern", help="Only scenarios matching the glob.")
+def update(scenario: str | None, config_path: str, report_dir: str, pattern: str | None) -> None:
+    """Accept the last `cassette test` run as the new baseline (like `jest -u`)."""
+    cfg = load_config(config_path)
+    updated = 0
+    for name in _pick(cfg, scenario or pattern):
+        run_file = cassette_path(Path(report_dir) / "runs", name)
+        if not run_file.exists():
+            click.echo(f"- {name}  no saved run in {report_dir}/runs; run `cassette test` first")
+            continue
+        new = read_cassette(run_file)
+        # A divergent call got an error from the cassette, not a real answer; accepting it would record a lie.
+        if any(
+            isinstance(s, ToolStep) and s.isError and "cassette: no recorded result" in str(s.result) for s in new.steps
+        ):
+            mark = click.style("×", fg="red")
+            click.echo(
+                f"{mark} {name}  the run called tools the cassette had no answer for; use `cassette record {name}`"
+            )
+            continue
+        base_path = cassette_path(cfg.cassettes_path, name)
+        if base_path.exists():
+            old = read_cassette(base_path)
+            d = diff_cassettes(old, new, ignore_args=cfg.diff.ignoreArgs, tolerance=cfg.diff.tolerance)
+            click.echo(f"{click.style('●', fg='green')} {name}  baseline updated ({summary(d)})")
+        else:
+            click.echo(f"{click.style('●', fg='green')} {name}  baseline created")
+        write_cassette(cfg.cassettes_path, new)
+        updated += 1
+    click.echo(f"{updated} baseline(s) updated")
 
 
 @main.command()
