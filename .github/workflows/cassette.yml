@@ -16,3 +16,24 @@ jobs:
           working-directory: examples/changelogcat
           offline: "true"
           install: pip install anthropic openai
+
+  # Live-model replay: the real model re-runs against the recorded tools, so prompt and model edits are actually
+  # exercised. Opt-in by label (costs API calls) and never for fork PRs (they cannot read secrets).
+  live-attacks:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (contains(github.event.pull_request.labels.*.name, 'red-team') ||
+       contains(github.event.pull_request.labels.*.name, 'live-replay'))
+    runs-on: ubuntu-latest
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./action
+        with:
+          working-directory: examples/changelogcat
+          offline: "false"
+          comment: "false"
+          report-dir: cassette-report-live
+          args: --filter 'injection-*'
+          install: pip install anthropic openai

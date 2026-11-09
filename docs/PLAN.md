@@ -59,6 +59,7 @@ Source: `Cassette — Project Spec.pdf` (4 weeks, ~20 working days). **Backend s
 - Scenarios + assertions that catch each one.
 
 ## Phase 10 — Installs + HTTP (Days 14–15)
+- Added: `live-attacks` job in cassette.yml (label `red-team`/`live-replay`) for live-model replay of the injection scenarios.
 - Install on own repos + at least 3 others (with opt-in); record their releases.
 - Streamable HTTP transport for the proxy (if time; isolate transport code in one module).
 - **Gate (Week 3):** a PR on the Cassette repo gets an automatic comment; ChangelogCat has written at least one real release.
