@@ -23,6 +23,11 @@ TOOLS = [
         description="get",
         inputSchema={"type": "object", "properties": {"number": {"type": "number"}}},
     ),
+    types.Tool(
+        name="create_issue",
+        description="create",
+        inputSchema={"type": "object", "properties": {"title": {"type": "string"}}},
+    ),
 ]
 
 
@@ -36,6 +41,8 @@ async def call_tool(name: str, arguments: dict | None) -> types.CallToolResult:
     if path := os.environ.get("LIVE_COUNT_FILE"):
         with open(path, "a", encoding="utf-8") as f:  # noqa: ASYNC230
             f.write(name + "\n")
+    if name == "create_issue":
+        return types.CallToolResult(content=[types.TextContent(type="text", text="issue created")])
     if name == "list_pull_requests":
         text = json.dumps([{"number": 7, "title": "Add dark mode", "merged_at": datetime.now(UTC).isoformat()}])
     else:

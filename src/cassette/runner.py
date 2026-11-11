@@ -89,6 +89,11 @@ async def run_scenario(
                 )
                 os.chmod(spec, 0o600)
                 argv += ["--spec", str(spec)]
+                if isinstance(fixture := scenario.input.get("fixture"), str):
+                    path = (cfg.root / fixture).resolve()
+                    if not path.is_file():
+                        raise FileNotFoundError(f"scenario {scenario_name!r}: fixture not found: {path}")
+                    argv += ["--inject", str(path)]
             cmd_var, args_var = server_env_names(name)
             env[cmd_var] = argv[0]
             env[args_var] = json.dumps(argv[1:])

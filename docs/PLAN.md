@@ -49,16 +49,17 @@ Source: `Cassette — Project Spec.pdf` (4 weeks, ~20 working days). **Backend s
 - `action/` wrapper around `cassette test`; PR comment markdown (summary line, scenario table, first diverging step, report artifact link); check status.
 - Run it on the Cassette repo itself, using `--offline` cassettes for its own tests.
 
-## Phase 8 — ChangelogCat live (Days 12–13)
+## Phase 8 — ChangelogCat live (Days 12–13) — built; needs GROQ_API_KEY secret + Pages enabled + a real tag push
 - Tag-push workflow in installed repos; writes the Release body in a separate narrow-scope step (agent stays read-only).
 - One-page install site (GitHub Pages).
 - Defenses: read-only token, tool allowlist, post-processing link filter.
 
-## Phase 9 — Attack fixtures (Days 13–14)
+## Phase 9 — Attack fixtures (Days 13–14) — DONE (docs/attacks.md)
 - 5 fixtures in `attacks/*.json`: `hidden-instruction`, `phishing-link`, `canary-exfil`, `tool-arg-smuggling`, `step-bomb` (placeholder domains and fake canaries only).
 - Scenarios + assertions that catch each one.
 
 ## Phase 10 — Installs + HTTP (Days 14–15)
+- Added: `live-attacks` job in cassette.yml (label `red-team`/`live-replay`) for live-model replay of the injection scenarios.
 - Install on own repos + at least 3 others (with opt-in); record their releases.
 - Streamable HTTP transport for the proxy (if time; isolate transport code in one module).
 - **Gate (Week 3):** a PR on the Cassette repo gets an automatic comment; ChangelogCat has written at least one real release.

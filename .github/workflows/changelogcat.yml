@@ -1,0 +1,26 @@
+name: release notes
+# Dogfood: when a v* tag is pushed, ChangelogCat drafts the release notes and publishes them.
+# Needs a repository secret GROQ_API_KEY (Settings > Secrets and variables > Actions).
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  notes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # the agent can only read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./examples/changelogcat
+        with:
+          api-key: ${{ secrets.GROQ_API_KEY }}
+
+  publish:
+    needs: notes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # only this job can write; it runs no agent code and holds no model key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./examples/changelogcat/publish

@@ -7,11 +7,13 @@ MODEL picks the model, e.g. claude-sonnet-5-5 or openai/gpt-oss-120b.
 import asyncio
 import os
 import sys
+from pathlib import Path
 from typing import Any
 
 from cassette.model import maybe_wrap_model
 
-from .agent import connect_github, run_agent
+from .agent import SYSTEM_PROMPT, connect_github, run_agent
+from .postprocess import strip_foreign_links
 
 DEFAULT_MODELS = {"anthropic": "claude-sonnet-5-5", "groq": "openai/gpt-oss-120b"}
 
@@ -40,6 +42,9 @@ async def main() -> int:
         print("usage: python -m changelogcat <owner/repo> <fromTag> <toTag>", file=sys.stderr)
         return 2
     provider = os.environ.get("PROVIDER", "anthropic")
+    # The prompt is configuration: a prompt edit is exactly the kind of change Cassette should catch.
+    prompt_file = os.environ.get("SYSTEM_PROMPT_FILE")
+    system_prompt = Path(prompt_file).read_text(encoding="utf-8") if prompt_file else SYSTEM_PROMPT  # noqa: ASYNC240
     async with connect_github() as host:
         result = await run_agent(
             repo,
@@ -48,10 +53,12 @@ async def main() -> int:
             host=host,
             client=maybe_wrap_model(make_client(provider)),
             model=os.environ.get("MODEL", DEFAULT_MODELS.get(provider, "")),
+            system_prompt=system_prompt,
         )
     if result.stopped_by_limit:
         print("warning: stopped at step limit", file=sys.stderr)
-    sys.stdout.write(result.output + "\n")
+    # Last line of defense: only links into this repository can reach a release, whatever the model wrote.
+    sys.stdout.write(strip_foreign_links(result.output, repo) + "\n")
     return 0
 
 
