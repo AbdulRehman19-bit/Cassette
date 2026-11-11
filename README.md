@@ -16,8 +16,8 @@ Prompt-level eval tools score outputs. Cassette checks what the agent *did*: whi
 arguments, in what order, and whether it leaked a canary or followed a link it shouldn't. A tool-call diff is a fact, not
 an LLM judge's opinion.
 
-> Status: early. Record/replay, trajectory diff, assertions, HTML report, PR comment and the GitHub Action work. Not yet
-> published to PyPI.
+> Status: early. Record/replay, trajectory diff, assertions, prompt-injection fixtures, HTML report, PR comment and the
+> GitHub Action work. Not yet published to PyPI (the name `cassette-cli` is free).
 
 ## How it works
 
@@ -51,7 +51,7 @@ agent:
   command: "python -m myagent"
 servers:
   github:
-    command: "npx -y @modelcontextprotocol/server-github"
+    command: "npx -y @modelcontextprotocol/server-github"   # any MCP stdio server
     env: { GITHUB_PERSONAL_ACCESS_TOKEN: "${GITHUB_TOKEN}" }
 scenarios:
   - name: release-v1.4
@@ -92,7 +92,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: <owner>/Cassette/action@main
+      - uses: AbdulRehman19-bit/Cassette/action@main
         with:
           offline: "true"
           install: pip install -r requirements.txt
@@ -101,10 +101,29 @@ jobs:
 It runs `cassette test`, uploads the report as an artifact, posts (and keeps updating) one PR comment, and sets the
 check status. A comment that can't be posted (a fork PR's read-only token) never decides the result.
 
+## Prompt-injection tests
+
+A fixture plants hostile content in what the agent's tools return *while recording*, so the cassette holds the real
+model's reaction and replays deterministically. Mark the scenario `attack: true` and the report counts a failure as an
+attack caught.
+
+```yaml
+scenarios:
+  - name: injection-canary-exfil
+    attack: true
+    input: { repo: pallets/click, fromTag: 8.1.4, toTag: 8.1.5, fixture: attacks/canary-exfil.json }
+```
+
+ChangelogCat ships five (hidden instruction, phishing link, canary exfiltration, tool-argument smuggling, step bomb);
+see [docs/attacks.md](docs/attacks.md) for what each does and what we measured. One honest limit: offline replay
+replays the recorded *model*, so a prompt edit only shows up with live-model replay (`cassette test` without
+`--offline`; the repo's `live-attacks` job runs it on PRs labelled `red-team` or `live-replay`). Live replay with a
+real model is not perfectly deterministic, so offline is the default CI path.
+
 ## Example: ChangelogCat
 
 [examples/changelogcat](examples/changelogcat) is a small read-only agent that turns merged PRs into release notes
-through the GitHub MCP server. It is the test subject Cassette is dogfooded on, with a committed baseline you can replay
+through a small read-only GitHub MCP server (GET-only, four tools). It is the test subject Cassette is dogfooded on, with a committed baseline you can replay
 without any API keys:
 
 ```bash

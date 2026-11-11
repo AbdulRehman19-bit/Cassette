@@ -69,6 +69,7 @@ Source: `Cassette — Project Spec.pdf` (4 weeks, ~20 working days). **Backend s
 - **PR #2:** `[red-team]` PR on one of your own repos (labelled, with note); Cassette fails; fix prompt/link filter; Cassette passes. Keep fail → fix → pass in commit history.
 
 ## Phase 12 — Docs and launch (Days 18–20)
+- README updated for attacks + live replay (on `docs/readme`); `cassette-cli` is free on PyPI.
 - README (one-line pitch, failing-PR GIF, 3-command quick start, architecture diagram), config and assertion docs.
 - Publish to npm (Changesets) and the Action Marketplace; 2-minute demo video.
 - Write-up post; launch (Show HN, r/LocalLLaMA / r/MachineLearning, X/LinkedIn).
