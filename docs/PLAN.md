@@ -70,7 +70,7 @@ Source: `Cassette — Project Spec.pdf` (4 weeks, ~20 working days). **Backend s
 
 ## Phase 12 — Docs and launch (Days 18–20)
 - README updated for attacks + live replay (on `docs/readme`); `cassette-cli` is free on PyPI.
-- README (one-line pitch, failing-PR GIF, 3-command quick start, architecture diagram), config and assertion docs.
+- README (one-line pitch, failing-PR GIF, 3-command quick start, architecture diagram), config and assertion docs (docs/config.md done).
 - Publish to npm (Changesets) and the Action Marketplace; 2-minute demo video.
 - Write-up post; launch (Show HN, r/LocalLLaMA / r/MachineLearning, X/LinkedIn).
 - **Gate (Week 4):** every success criterion in the spec ticked.

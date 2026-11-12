@@ -28,7 +28,7 @@ Cassette sits between your agent and its MCP servers (a recording proxy) and wra
    answers every time. `--offline` also replays the recorded model, so it costs nothing.
 3. **Diff**: the new trajectory is aligned against the baseline (tool order, arguments, results, output, tokens, latency).
 4. **Assert**: deterministic checks such as `forbid_tool`, `no_canary`, `links_allowlist`, budgets. See
-   [docs/assertions.md](docs/assertions.md).
+   [docs/assertions.md](docs/assertions.md). Config: [docs/config.md](docs/config.md).
 5. **Report**: a static `cassette-report/index.html` and a PR comment.
 
 ## Quick start
