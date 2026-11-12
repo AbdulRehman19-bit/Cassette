@@ -40,7 +40,7 @@ The real server's command and env reach the proxy through a temporary spec file,
 | Key | Meaning |
 |---|---|
 | `name` | Letters, digits, `.`, `_`, `-`. Names the cassette file. |
-| `input` | Free-form mapping passed to the agent as env vars (`repo` -> `REPO`, `fromTag` -> `FROM_TAG`, ...). |
+| `input` | Free-form mapping. String values become env vars (`repo` -> `REPO`, `fromTag` -> `FROM_TAG`); the whole mapping is also in `CASSETTE_INPUT` as JSON. |
 | `input.fixture` | Path to an [attack fixture](attacks.md), applied in `record` mode only. |
 | `assertions` | Extra assertions for this scenario, on top of the global ones. |
 | `attack` | `true` marks an adversarial scenario; a failure counts as an attack caught in the report. |
