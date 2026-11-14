@@ -31,6 +31,26 @@ Cassette sits between your agent and its MCP servers (a recording proxy) and wra
    [docs/assertions.md](docs/assertions.md). Config: [docs/config.md](docs/config.md).
 5. **Report**: a static `cassette-report/index.html` and a PR comment.
 
+## Architecture
+
+```mermaid
+flowchart LR
+    R[cassette record / test] -->|starts, sets MCP_*_COMMAND| A[Your agent]
+    A -->|MCP stdio| P[Cassette proxy]
+    P -->|record: forward + log| S[(Real MCP server)]
+    P -.->|replay: answer from cassette| C[(cassette.json)]
+    A -->|maybe_wrap_model| M[Model API]
+    M -.->|offline: recorded answers| C
+    P -->|events| T[trace.jsonl]
+    A -->|events| T
+    T --> R
+    R --> D[Diff + assertions]
+    D --> H[index.html + PR comment]
+```
+
+The proxy and the model wrapper run in different processes and both append to one trace; the runner folds it into a
+cassette (record) or into a trajectory to diff against the baseline (test).
+
 ## Quick start
 
 ```bash
