@@ -73,6 +73,7 @@ Source: `Cassette — Project Spec.pdf` (4 weeks, ~20 working days). **Backend s
 - README (one-line pitch, failing-PR GIF, 3-command quick start, architecture diagram), config and assertion docs (docs/config.md done).
 - Publish to npm (Changesets) and the Action Marketplace; 2-minute demo video.
 - Write-up post; launch (Show HN, r/LocalLLaMA / r/MachineLearning, X/LinkedIn).
+- Drafts: docs/demo-script.md, docs/launch-post.md, docs/writeup.md; PyPI workflow written (not run).
 - **Gate (Week 4):** every success criterion in the spec ticked.
 
 ## Stretch (only after Phase 12)
