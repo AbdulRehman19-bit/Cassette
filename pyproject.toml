@@ -1,6 +1,6 @@
 [project]
 name = "cassette-cli"
-version = "0.0.0"
+version = "0.1.0"
 description = "pytest for agents: record, replay, diff and assert AI agent runs over MCP"
 readme = "README.md"
 requires-python = ">=3.11"

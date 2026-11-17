@@ -94,6 +94,7 @@ report_dir_opt = click.option(
 @click.option("--check-schemas", is_flag=True, help="List tools from the live servers to detect schema drift.")
 @report_dir_opt
 @click.option("--no-report", is_flag=True, help="Don't write the report files.")
+@click.option("--jobs", type=click.IntRange(min=1), help="Scenarios to run at once (default 4 offline, 1 live).")
 def test(
     scenario: str | None,
     config_path: str,
@@ -104,6 +105,7 @@ def test(
     check_schemas: bool,
     report_dir: str,
     no_report: bool,
+    jobs: int | None,
 ) -> None:
     """Replay scenarios against their cassettes."""
     cfg = load_config(config_path)
@@ -115,15 +117,30 @@ def test(
     except ValueError as e:
         raise click.ClickException(str(e)) from e
     live_schemas = asyncio.run(probe_live_schemas(cfg)) if check_schemas else None
-    results: list[ScenarioResult] = []
-    for name in names:
-        base = read_scenario(cfg.cassettes_path, name)
-        run = asyncio.run(run_scenario(cfg, name, mode="replay", offline=offline, model=model, quiet=as_json))
-        res = evaluate_scenario(cfg, name, base, run, offline=offline, live_schemas=live_schemas)
-        results.append(res)
-        if not no_report:  # keep the run so `cassette update` can accept it as the new baseline
-            write_cassette(Path(report_dir) / "runs", run.cassette)
-        if not as_json:
+    # Offline replays are independent and free, so run several at once; live ones share an API rate limit.
+    limit = jobs or (4 if offline else 1)
+    parallel = limit > 1 and len(names) > 1
+
+    async def one(name: str, gate: asyncio.Semaphore) -> ScenarioResult:
+        async with gate:
+            base = read_scenario(cfg.cassettes_path, name)
+            run = await run_scenario(
+                cfg, name, mode="replay", offline=offline, model=model, quiet=as_json or parallel
+            )
+            res = evaluate_scenario(cfg, name, base, run, offline=offline, live_schemas=live_schemas)
+            if not no_report:  # keep the run so `cassette update` can accept it as the new baseline
+                write_cassette(Path(report_dir) / "runs", run.cassette)
+            if not as_json and not parallel:
+                _print_result(res, ignore)
+            return res
+
+    async def run_all() -> list[ScenarioResult]:
+        gate = asyncio.Semaphore(limit)
+        return list(await asyncio.gather(*(one(n, gate) for n in names)))
+
+    results = asyncio.run(run_all())
+    if parallel and not as_json:
+        for res in results:  # printed in config order so the output reads the same as a sequential run
             _print_result(res, ignore)
 
     report = build_report(results, offline=offline, model=model)
