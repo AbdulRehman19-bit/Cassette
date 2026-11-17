@@ -99,7 +99,7 @@ cassette test --model small  # what would a different model change?
 | `cassette report` | Rebuild the HTML report and PR comment from the last run |
 | `cassette comment` | Post or update the Cassette comment on a PR |
 
-Common flags: `--offline`, `--model <id>`, `--json`, `--filter <glob>`, `--check-schemas`.
+Common flags: `--offline`, `--model <id>`, `--json`, `--filter <glob>`, `--check-schemas`, `--jobs <n>` (parallel scenarios; default 4 offline, 1 live).
 
 ## GitHub Action
 
