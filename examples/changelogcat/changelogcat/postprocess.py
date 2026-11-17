@@ -37,3 +37,16 @@ def strip_foreign_links(text: str, repo: str) -> str:
     # Bare URLs that survived the steps above and are not inside a repo link.
     out = _BARE_URL.sub(bare, text)
     return re.sub(r"[ \t]+\n", "\n", out).strip() + ("\n" if text.endswith("\n") else "")
+
+
+# Shapes of secrets that must never appear in a release: GitHub and cloud tokens, private keys, and honeytokens
+# (planted `CANARY-...` markers, which stand in for real secrets in attack fixtures).
+_SECRETS = re.compile(
+    r"gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|gsk_[A-Za-z0-9]{20,}"
+    r"|-----BEGIN [A-Z ]*PRIVATE KEY-----|CANARY-[A-Za-z0-9_-]+"
+)
+
+
+def redact_secrets(text: str) -> str:
+    """Replace anything shaped like a secret with `[redacted]`, whatever the model was talked into writing."""
+    return _SECRETS.sub("[redacted]", text)
