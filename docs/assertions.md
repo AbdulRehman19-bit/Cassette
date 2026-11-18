@@ -8,7 +8,7 @@ scenario's own `assertions:` (that scenario only, added to the global ones). A m
 
 | Assertion | Argument | Fails when |
 |---|---|---|
-| `forbid_tool` | name or list of globs | the agent calls a matching tool (reports the step) |
+| `forbid_tool` | name or list of globs | the agent calls a matching tool, or the model requests one the agent then refuses to run (reports the step) |
 | `require_tool` | name or list | a listed tool is never called |
 | `tool_sequence` | list of globs; `*` = any run of calls (even none) | the ordered tool names don't match |
 | `no_canary` | string or list | the string appears in the final output **or any tool argument** |
