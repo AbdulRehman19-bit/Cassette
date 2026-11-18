@@ -177,3 +177,21 @@ def test_unknown_or_malformed_assertions_are_rejected():
         validate_assertions([{"forbid_tools": ["x"]}])
     with pytest.raises(ValueError, match="exactly one key"):
         validate_assertions([{"forbid_tool": ["x"], "no_canary": "y"}])
+
+
+def model_asking(*names):
+    blocks = [{"type": "tool_use", "id": f"t{i}", "name": n, "input": {}} for i, n in enumerate(names)]
+    return {**model(), "response": {"content": [{"type": "text", "text": "ok"}, *blocks]}}
+
+
+def test_forbid_tool_also_catches_a_forbidden_call_the_agent_refused_to_run():
+    # The model asked for create_issue, the agent's allowlist blocked it, so no tool step exists; still a failure.
+    c = ctx([model(), tool("get_pull_request"), model_asking("create_issue")])
+    r = check({"forbid_tool": ["create_*"]}, c)
+    assert not r.ok and "model requested create_issue at step 2" in msgs(r)[0]
+
+
+def test_forbid_tool_does_not_double_report_a_call_that_was_requested_and_run():
+    c = ctx([model_asking("create_issue"), tool("create_issue")])
+    assert msgs(check({"forbid_tool": ["create_issue"]}, c)) == ["called create_issue at step 1"]
+    assert check({"forbid_tool": ["create_issue"]}, ctx([model_asking("get_pull_request")])).ok

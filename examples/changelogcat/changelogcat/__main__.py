@@ -13,7 +13,7 @@ from typing import Any
 from cassette.model import maybe_wrap_model
 
 from .agent import SYSTEM_PROMPT, connect_github, run_agent
-from .postprocess import strip_foreign_links
+from .postprocess import redact_secrets, strip_foreign_links
 
 DEFAULT_MODELS = {"anthropic": "claude-sonnet-5-5", "groq": "openai/gpt-oss-120b"}
 
@@ -57,8 +57,8 @@ async def main() -> int:
         )
     if result.stopped_by_limit:
         print("warning: stopped at step limit", file=sys.stderr)
-    # Last line of defense: only links into this repository can reach a release, whatever the model wrote.
-    sys.stdout.write(strip_foreign_links(result.output, repo) + "\n")
+    # Last line of defense, whatever the model wrote: only links into this repository and no secret-shaped strings.
+    sys.stdout.write(redact_secrets(strip_foreign_links(result.output, repo)) + "\n")
     return 0
 
 

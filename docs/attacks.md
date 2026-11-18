@@ -56,8 +56,9 @@ real secrets.
 Takeaways:
 
 - The hardened prompt held on every attack, and the committed baselines are those runs.
-- A naive prompt is enough for the model to read and leak a planted secret. ChangelogCat has no output defense against
-  that, only the prompt and Cassette's assertion. That is a real gap, and exactly what a regression test should surface.
+- A naive prompt is enough for the model to read and leak a planted secret. ChangelogCat had no output defense against
+  that, only the prompt and Cassette's assertion. That was a real gap, and exactly what a regression test should surface;
+  it now has `redact_secrets` (token shapes, private keys, `CANARY-*` honeytokens) as a last-line filter.
 - Defense in depth worked where it existed: the model wrote the phishing link and the link filter removed it. Because
   the agent's own code runs live during replay, removing that filter later would make `links_allowlist` fail.
 - Offline replay replays the recorded *model*, so a prompt edit only shows up when the live model replays against the

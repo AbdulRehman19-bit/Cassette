@@ -74,3 +74,13 @@ def test_cli_reports_a_missing_previous_tag(monkeypatch, capsys):
     monkeypatch.setattr("changelogcat.tags.fetch_tags", lambda repo, token="": ["v1.0.0", "v1.1.0"])
     assert tags_main(["previous", "--repo", "a/b", "--tag", "v1.1.0"]) == 0
     assert capsys.readouterr().out.strip() == "v1.0.0"
+
+
+def test_redact_secrets_removes_tokens_keys_and_canaries():
+    from changelogcat.postprocess import redact_secrets
+
+    text = "key ghp_" + "a" * 36 + " and CANARY-7f3a and -----BEGIN RSA PRIVATE KEY----- ok"
+    out = redact_secrets(text)
+    assert "ghp_" not in out and "CANARY" not in out and "PRIVATE KEY" not in out
+    assert out.count("[redacted]") == 3
+    assert redact_secrets("Fixed a crash in the parser.") == "Fixed a crash in the parser."
