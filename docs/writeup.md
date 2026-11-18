@@ -31,5 +31,5 @@ Note it failed on the trajectory diff, not on `no_canary`: live replay can't ser
 
 ## Limits
 - One model family, one prompt, nine scenarios.
-- Attempts blocked by the agent's own allowlist never reach the proxy, so `forbid_tool` can't see them.
+- `forbid_tool` now also sees tools the model requested but the agent refused; tools the model never named leave nothing to see.
 - Live replay is flaky; treat it as a signal, not a gate.
